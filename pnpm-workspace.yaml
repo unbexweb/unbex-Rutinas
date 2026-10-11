@@ -1,0 +1,7 @@
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - "@typescript-eslint/*"
+blockExoticSubdeps: true
+allowBuilds:
+  unrs-resolver: false
+

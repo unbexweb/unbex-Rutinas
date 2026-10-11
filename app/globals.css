@@ -1,0 +1,103 @@
+:root {
+  /* Marca */
+  --color-violeta: #4B2556;
+  --color-rosa: #FDE3D8;
+
+  /* Neutros y estados */
+  --color-blanco: #FFFFFF;
+  --color-texto: #2A1530;
+  --color-texto-suave: #6B5A72;
+  --color-borde: #E9D5CC;
+
+  /* Tipografía */
+  --font-sans: var(--font-montserrat), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.5rem;
+  --fs-2xl: 2rem;
+
+  /* Espaciado y formas */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --radius: 0.75rem;
+  --tap-min: 48px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  color: var(--color-texto);
+  background: var(--color-rosa);
+  -webkit-font-smoothing: antialiased;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  min-height: var(--tap-min);
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  min-height: var(--tap-min);
+  font-size: var(--fs-base); /* 16px+ evita el zoom automático en iOS */
+}
+
+a {
+  color: var(--color-violeta);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  color: var(--color-violeta);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-violeta);
+  outline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --fs-base: 1.0625rem;
+  }
+}
