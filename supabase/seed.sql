@@ -16,7 +16,7 @@ begin
 
   insert into public.gyms (nombre, slug) values ('Unbex', 'unbex') returning id into v_gym;
 
-  -- Biblioteca de ejercicios (96). Los nombres respetan la planilla.
+  -- Biblioteca de ejercicios (97). Los nombres respetan la planilla.
   insert into public.ejercicios (gym_id, nombre)
   select v_gym, n
   from (values
@@ -99,6 +99,7 @@ begin
     ('Sacapular Plank CODOS'),
     ('Samson Stretch ALT'),
     ('Samson Stretch LATERAL DER'),
+    ('Samson Stretch LATERAL IZQ'),
     ('Shoulder Press'),
     ('Shoulder Taps'),
     ('Side Bend DER'),
@@ -328,7 +329,7 @@ begin
     (1, 4, 5, 2, 'Hip Thrust ISO / ALT', null::text, '3', '20"', null::text, true, 'Super Serie'),
     (1, 5, 1, 1, 'Gato Contento y Enojado', null::text, null::text, '10', null::text, false, null::text),
     (1, 5, 1, 2, 'Samson Stretch LATERAL DER', null::text, null::text, '8', null::text, false, null::text),
-    (1, 5, 1, 3, 'Samson Stretch LATERAL DER', null::text, null::text, '8', null::text, false, null::text),
+    (1, 5, 1, 3, 'Samson Stretch LATERAL IZQ', null::text, null::text, '8', null::text, false, null::text),
     (1, 5, 1, 4, 'Rotaciones en Cuclillas', null::text, null::text, '10', null::text, false, null::text),
     (1, 5, 2, 1, 'Plank March', null::text, null::text, null::text, null::text, false, null::text),
     (1, 5, 2, 2, 'Lateral Plank DER', null::text, null::text, null::text, null::text, false, null::text),
@@ -425,7 +426,7 @@ begin
     (2, 4, 5, 2, 'Hip Thrust ISO / ALT', null::text, '4', '20"', null::text, true, 'Super Serie'),
     (2, 5, 1, 1, 'Gato Contento y Enojado', null::text, null::text, '10', null::text, false, null::text),
     (2, 5, 1, 2, 'Samson Stretch LATERAL DER', null::text, null::text, '8', null::text, false, null::text),
-    (2, 5, 1, 3, 'Samson Stretch LATERAL DER', null::text, null::text, '8', null::text, false, null::text),
+    (2, 5, 1, 3, 'Samson Stretch LATERAL IZQ', null::text, null::text, '8', null::text, false, null::text),
     (2, 5, 1, 4, 'Rotaciones en Cuclillas', null::text, null::text, '10', null::text, false, null::text),
     (2, 5, 2, 1, 'Plank March', null::text, null::text, null::text, null::text, false, null::text),
     (2, 5, 2, 2, 'Lateral Plank DER', null::text, null::text, null::text, null::text, false, null::text),
@@ -520,7 +521,7 @@ begin
     (3, 4, 5, 2, 'Hip Thrust ISO / ALT', null::text, '5', '20"', null::text, true, 'Super Serie'),
     (3, 5, 1, 1, 'Gato Contento y Enojado', null::text, null::text, '10', null::text, false, null::text),
     (3, 5, 1, 2, 'Samson Stretch LATERAL DER', null::text, null::text, '8', null::text, false, null::text),
-    (3, 5, 1, 3, 'Samson Stretch LATERAL DER', null::text, null::text, '8', null::text, false, null::text),
+    (3, 5, 1, 3, 'Samson Stretch LATERAL IZQ', null::text, null::text, '8', null::text, false, null::text),
     (3, 5, 1, 4, 'Rotaciones en Cuclillas', null::text, null::text, '10', null::text, false, null::text),
     (3, 5, 2, 1, 'Plank March', null::text, null::text, null::text, null::text, false, null::text),
     (3, 5, 2, 2, 'Lateral Plank DER', null::text, null::text, null::text, null::text, false, null::text),
@@ -615,7 +616,7 @@ begin
     (4, 4, 5, 2, 'Hip Thrust ISO / ALT', null::text, '3', '10', null::text, true, 'f,,,x,,xtþþþ,,xx,x,x,,,x,,x,,,,zx,,,,x,,,x,,x-rt$$-rþtþþþþ,,gtx,f,t,fgxx,,ftftgxgfxg,t,gffftx,f,xx tttt,,xxtt,xxxgfg,ftf,tt,f,,xf,,,x,xx,,x,,,,,,xxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx · Super Serie'),
     (4, 5, 1, 1, 'Gato Contento y Enojado', null::text, null::text, '10', null::text, false, null::text),
     (4, 5, 1, 2, 'Samson Stretch LATERAL DER', null::text, null::text, '8', null::text, false, null::text),
-    (4, 5, 1, 3, 'Samson Stretch LATERAL DER', null::text, null::text, '8', null::text, false, null::text),
+    (4, 5, 1, 3, 'Samson Stretch LATERAL IZQ', null::text, null::text, '8', null::text, false, null::text),
     (4, 5, 1, 4, 'Rotaciones en Cuclillas', null::text, null::text, '10', null::text, false, null::text),
     (4, 5, 2, 1, 'Plank March', null::text, null::text, null::text, null::text, false, null::text),
     (4, 5, 2, 2, 'Lateral Plank DER', null::text, null::text, null::text, null::text, false, null::text),
