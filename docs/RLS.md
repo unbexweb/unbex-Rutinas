@@ -57,6 +57,10 @@ Todo está **restringido al gym del usuario** (`gym_id`); un usuario de otro gym
 | Función | Quién puede ejecutarla |
 | --- | --- |
 | `current_gym_id()`, `current_rol()`, `current_estado()`, `is_staff()`, `is_alumno_activo()`, `alumno_en_mi_gym()`, `plan_en_mi_gym()`, `alumno_tiene_plan()`, `alumno_ve_ejercicio()` | `authenticated` (las usan las políticas) |
+| `asignar_plan(alumno_id, plan_id)` | `authenticated`, exige `is_staff()` y mismo gym. Finaliza la asignación activa (si hay) y crea la nueva en S1·E1 |
+| `atender_solicitud(solicitud_id, plan_id)` | Ídem. Llama a `asignar_plan` y marca la solicitud `atendida` por el usuario actual |
+| `duplicar_plan(plan_id, nombre, tipo, nivel)` | Ídem. Clona un plan completo como plantilla nueva |
+| `copiar_semana(plan_id, origen, destino)` | Ídem. Reemplaza los bloques de la semana destino con una copia de la origen |
 | `completar_sesion(asignacion_id, sesion_id)` | `authenticated` (alumno activo): valida que la asignación sea suya y esté activa y que la sesión sea la que le toca; marca la sesión hecha y avanza (S4·E6 finaliza la asignación) |
 | `personalizar_plan(alumno_id, plan_id)` | `authenticated`, pero adentro exige `is_staff()` y que plan y alumno sean del mismo gym |
 | `email_por_dni(dni)` | **solo `service_role`** (Server Action de login). No está expuesta a `anon` ni `authenticated` para que nadie pueda averiguar el email de un DNI |
@@ -79,3 +83,10 @@ Solo staff. Clona plan, sesiones, bloques y ejercicios con `alumno_id` y `origen
 ## Nota para el editor de planes (Fase 4)
 
 Editar bloques y ejercicios con **`UPDATE` en el lugar**; no borrar y reinsertar. `registros_series.bloque_ejercicio_id` es `ON DELETE SET NULL`: si se borra un `bloque_ejercicio`, las series registradas no se pierden (el historial queda por `ejercicio_usado_id`), pero pierden el vínculo con el bloque y el alumno ya no puede editarlas (la política exige `bloque_ejercicio_id` no nulo). Borrar y reinsertar le cortaría ese vínculo a todo el historial del ejercicio. Borrar solo cuando el profe saca de verdad un ejercicio del plan.
+
+## Panel de staff (Fase 4)
+
+- Toda Server Action que usa el cliente admin (service role) verifica antes con `verificarStaff()` / `verificarAdmin()` (`lib/staff/auth.ts`) y toma el `gym_id` del perfil de quien llama, nunca del formulario. Hoy solo la usan el alta de alumnos y de profes (`lib/staff/crear-usuario.ts`).
+- El resto del panel (editor de planes, alumnos, ejercicios, solicitudes) usa el cliente con sesión del usuario: RLS sigue filtrando por gym.
+- El editor de planes edita con `UPDATE` en el lugar (cambiar ejercicio, series, orden...). Solo se borra cuando el profe quita algo a propósito. `copiar_semana` sí reemplaza los bloques de la semana destino, así que las series ya registradas en ellos quedan con `bloque_ejercicio_id` nulo.
+- Un plan con asignaciones (activas o históricas) no se puede eliminar; el panel lo avisa antes de llegar al error de la base.

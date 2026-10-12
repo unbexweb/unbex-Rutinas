@@ -625,15 +625,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _clonar_bloques: {
+        Args: { p_destino: string; p_origen: string }
+        Returns: undefined
+      }
       alumno_en_mi_gym: { Args: { p_alumno_id: string }; Returns: boolean }
       alumno_tiene_plan: { Args: { p_plan_id: string }; Returns: boolean }
       alumno_ve_ejercicio: {
         Args: { p_ejercicio_id: string }
         Returns: boolean
       }
+      asignar_plan: {
+        Args: { p_alumno_id: string; p_plan_id: string }
+        Returns: string
+      }
+      atender_solicitud: {
+        Args: { p_plan_id: string; p_solicitud_id: string }
+        Returns: string
+      }
       completar_sesion: {
         Args: { p_asignacion_id: string; p_sesion_id: string }
         Returns: boolean
+      }
+      copiar_semana: {
+        Args: {
+          p_plan_id: string
+          p_semana_destino: number
+          p_semana_origen: number
+        }
+        Returns: number
       }
       current_estado: {
         Args: never
@@ -641,6 +661,15 @@ export type Database = {
       }
       current_gym_id: { Args: never; Returns: string }
       current_rol: { Args: never; Returns: Database["public"]["Enums"]["rol"] }
+      duplicar_plan: {
+        Args: {
+          p_nivel: string
+          p_nombre: string
+          p_plan_id: string
+          p_tipo: string
+        }
+        Returns: string
+      }
       email_por_dni: { Args: { p_dni: string }; Returns: string }
       is_alumno_activo: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }

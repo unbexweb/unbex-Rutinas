@@ -1,0 +1,142 @@
+.shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-areas: "menu contenido";
+}
+
+.barra {
+  display: none;
+}
+
+.menu {
+  grid-area: menu;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-4);
+  background: var(--color-violeta);
+  color: var(--color-blanco);
+}
+
+.marca {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius);
+  color: var(--color-blanco);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.activo {
+  background: var(--color-rosa);
+  color: var(--color-violeta);
+}
+
+.pie {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.usuario {
+  overflow-wrap: anywhere;
+}
+
+.salir {
+  width: 100%;
+  background: transparent;
+  color: var(--color-blanco);
+  border: 2px solid var(--color-blanco);
+  border-radius: var(--radius);
+  font-weight: 700;
+}
+
+.contenido {
+  grid-area: contenido;
+  min-width: 0;
+  padding: var(--space-8);
+}
+
+.menu :focus-visible {
+  outline-color: var(--color-rosa);
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-areas: "contenido";
+  }
+
+  .barra {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-violeta);
+    color: var(--color-blanco);
+  }
+
+  .hamburguesa {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-3);
+    background: transparent;
+    color: var(--color-blanco);
+    border: 2px solid var(--color-blanco);
+    border-radius: var(--radius);
+    font-weight: 700;
+  }
+
+  .menu {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    width: min(280px, 85vw);
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+    visibility: hidden;
+  }
+
+  .abierto {
+    transform: none;
+    visibility: visible;
+  }
+
+  .contenido {
+    padding: var(--space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    transition: none;
+  }
+}
