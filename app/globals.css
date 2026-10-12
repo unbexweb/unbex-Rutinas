@@ -8,6 +8,10 @@
   --color-texto: #2A1530;
   --color-texto-suave: #6B5A72;
   --color-borde: #E9D5CC;
+  --color-error: #B3261E;
+  --color-error-fondo: #FCE8E6;
+  --color-exito: #1E6B3A;
+  --color-exito-fondo: #E4F4EA;
 
   /* Tipografía */
   --font-sans: var(--font-montserrat), system-ui, -apple-system, "Segoe UI", sans-serif;

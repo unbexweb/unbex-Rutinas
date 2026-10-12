@@ -1,0 +1,28 @@
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--space-3) var(--space-6);
+  border: 2px solid var(--color-violeta);
+  border-radius: var(--radius);
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+}
+
+.primario {
+  background: var(--color-violeta);
+  color: var(--color-blanco);
+}
+
+.secundario {
+  background: transparent;
+  color: var(--color-violeta);
+}
+
+.boton:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}

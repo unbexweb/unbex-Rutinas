@@ -1,0 +1,13 @@
+.pantalla {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+}
+
+.titulo {
+  font-size: var(--fs-2xl);
+}

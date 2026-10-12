@@ -1,0 +1,21 @@
+.mensaje {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+
+.error {
+  background: var(--color-error-fondo);
+  color: var(--color-error);
+}
+
+.exito {
+  background: var(--color-exito-fondo);
+  color: var(--color-exito);
+}
+
+.info {
+  background: var(--color-blanco);
+  color: var(--color-texto);
+  border: 1px solid var(--color-borde);
+}
