@@ -1,0 +1,10 @@
+/* Zona del alumno: pensada para celular y para gente grande. Texto base de 18px y botones de 56px. */
+.app {
+  --fs-base: 1.125rem;
+  --fs-sm: 1rem;
+  --tap-min: 56px;
+  font-size: var(--fs-base);
+  min-height: 100dvh;
+  /* lugar para la navegación fija de abajo */
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}

@@ -631,6 +631,10 @@ export type Database = {
         Args: { p_ejercicio_id: string }
         Returns: boolean
       }
+      completar_sesion: {
+        Args: { p_asignacion_id: string; p_sesion_id: string }
+        Returns: boolean
+      }
       current_estado: {
         Args: never
         Returns: Database["public"]["Enums"]["estado_usuario"]

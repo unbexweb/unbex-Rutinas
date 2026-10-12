@@ -57,6 +57,7 @@ Todo está **restringido al gym del usuario** (`gym_id`); un usuario de otro gym
 | Función | Quién puede ejecutarla |
 | --- | --- |
 | `current_gym_id()`, `current_rol()`, `current_estado()`, `is_staff()`, `is_alumno_activo()`, `alumno_en_mi_gym()`, `plan_en_mi_gym()`, `alumno_tiene_plan()`, `alumno_ve_ejercicio()` | `authenticated` (las usan las políticas) |
+| `completar_sesion(asignacion_id, sesion_id)` | `authenticated` (alumno activo): valida que la asignación sea suya y esté activa y que la sesión sea la que le toca; marca la sesión hecha y avanza (S4·E6 finaliza la asignación) |
 | `personalizar_plan(alumno_id, plan_id)` | `authenticated`, pero adentro exige `is_staff()` y que plan y alumno sean del mismo gym |
 | `email_por_dni(dni)` | **solo `service_role`** (Server Action de login). No está expuesta a `anon` ni `authenticated` para que nadie pueda averiguar el email de un DNI |
 

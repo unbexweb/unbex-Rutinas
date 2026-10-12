@@ -1,0 +1,81 @@
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--color-violeta);
+  color: var(--color-blanco);
+  border-radius: var(--radius);
+}
+
+/* En la tarjeta violeta, el botón primario se invierte para mantener el contraste. */
+.tarjeta :global(a),
+.tarjeta :global(button) {
+  background: var(--color-blanco);
+  color: var(--color-violeta);
+  border-color: var(--color-blanco);
+}
+
+.etiqueta {
+  font-size: var(--fs-lg);
+}
+
+.tarjetaTitulo {
+  font-size: var(--fs-xl);
+  color: var(--color-blanco);
+}
+
+.progreso {
+  font-weight: 700;
+}
+
+.barra {
+  width: 100%;
+  height: 12px;
+  accent-color: var(--color-rosa);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: 0;
+  padding: 0;
+}
+
+.legend {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-min);
+  padding: 0 var(--space-4);
+  background: var(--color-blanco);
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radius);
+}
+
+.opcion input {
+  width: 24px;
+  min-height: 24px;
+  accent-color: var(--color-violeta);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radius);
+  background: var(--color-blanco);
+}

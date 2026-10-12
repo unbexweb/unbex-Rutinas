@@ -1,0 +1,34 @@
+.nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--color-blanco);
+  border-top: 2px solid var(--color-violeta);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 64px;
+  padding: var(--space-2);
+  color: var(--color-texto);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.icono {
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+
+.activo {
+  background: var(--color-violeta);
+  color: var(--color-blanco);
+}

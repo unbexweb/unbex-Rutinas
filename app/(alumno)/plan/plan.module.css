@@ -1,0 +1,59 @@
+.resumen {
+  font-weight: 700;
+}
+
+.semana {
+  font-size: var(--fs-lg);
+  margin-bottom: var(--space-3);
+}
+
+.grilla {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.celda {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 72px;
+  padding: var(--space-2);
+  border: 2px solid var(--color-violeta);
+  border-radius: var(--radius);
+  text-decoration: none;
+  text-align: center;
+}
+
+.numero {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+.estado {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.hecho {
+  background: var(--color-blanco);
+  color: var(--color-violeta);
+}
+
+.hoy {
+  background: var(--color-violeta);
+  color: var(--color-blanco);
+  outline: 4px solid var(--color-violeta);
+  outline-offset: 2px;
+}
+
+.siguiente {
+  background: transparent;
+  color: var(--color-texto-suave);
+  border-style: dashed;
+  border-color: var(--color-borde);
+}

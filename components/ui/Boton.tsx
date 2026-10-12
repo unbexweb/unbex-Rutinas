@@ -9,10 +9,22 @@ type Props = {
   variante?: "primario" | "secundario";
   href?: string;
   type?: "button" | "submit";
+  onClick?: () => void;
+  disabled?: boolean;
+  cargando?: boolean;
 };
 
-export function Boton({ children, variante = "primario", href, type = "submit" }: Props) {
+export function Boton({
+  children,
+  variante = "primario",
+  href,
+  type = "submit",
+  onClick,
+  disabled,
+  cargando,
+}: Props) {
   const { pending } = useFormStatus();
+  const ocupado = pending || cargando;
   const clase = `${styles.boton} ${styles[variante]}`;
 
   if (href) {
@@ -23,8 +35,14 @@ export function Boton({ children, variante = "primario", href, type = "submit" }
     );
   }
   return (
-    <button type={type} className={clase} disabled={pending} aria-busy={pending}>
-      {pending ? "Un momento…" : children}
+    <button
+      type={type}
+      className={clase}
+      onClick={onClick}
+      disabled={disabled || ocupado}
+      aria-busy={ocupado}
+    >
+      {ocupado ? "Un momento…" : children}
     </button>
   );
 }
