@@ -1,0 +1,40 @@
+.aviso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-blanco);
+  border: 2px solid var(--color-violeta);
+  border-radius: var(--radius);
+}
+
+.texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.botones {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.instalar,
+.cerrar {
+  flex: 1;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-4);
+  border: 2px solid var(--color-violeta);
+  border-radius: var(--radius);
+  font-weight: 700;
+}
+
+.instalar {
+  background: var(--color-violeta);
+  color: var(--color-blanco);
+}
+
+.cerrar {
+  background: transparent;
+  color: var(--color-violeta);
+}

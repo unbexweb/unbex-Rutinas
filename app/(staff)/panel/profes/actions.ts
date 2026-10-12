@@ -5,6 +5,7 @@ import { texto } from "@/lib/auth/validar";
 import { createClient } from "@/lib/supabase/server";
 import { SIN_PERMISO, verificarAdmin } from "@/lib/staff/auth";
 import { crearUsuario } from "@/lib/staff/crear-usuario";
+import { restablecerPassword, type ResultadoRestablecer } from "@/lib/staff/restablecer-password";
 import type { ResultadoStaff } from "@/lib/staff/tipos";
 
 export async function altaProfe(_prev: EstadoAlta, formData: FormData): Promise<EstadoAlta> {
@@ -45,4 +46,11 @@ export async function cambiarEstadoProfe(profeId: string, estado: "activo" | "in
     .select("id");
   if (error || !data?.length) return { ok: false, error: "No pudimos cambiar el estado." };
   return { ok: true };
+}
+
+// Solo admin; restablecerPassword vuelve a comprobar rol, gym y que el objetivo sea un profe.
+export async function restablecerPasswordProfe(profeId: string): Promise<ResultadoRestablecer> {
+  const llamador = await verificarAdmin();
+  if (!llamador) return { ok: false, error: SIN_PERMISO };
+  return restablecerPassword(llamador, profeId);
 }

@@ -1,3 +1,4 @@
+import { AvisoInstalar } from "@/components/pwa/AvisoInstalar";
 import { BotonCerrarSesion } from "@/components/ui/BotonCerrarSesion";
 import { Boton } from "@/components/ui/Boton";
 import { Mensaje } from "@/components/ui/Mensaje";
@@ -18,6 +19,7 @@ export default async function InicioAlumnoPage() {
   if (!asignacion) {
     return (
       <Pantalla titulo={titulo}>
+        <AvisoInstalar />
         <Mensaje>Todavía no tenés un plan asignado. Hablá con tu profe.</Mensaje>
         <BotonCerrarSesion />
       </Pantalla>
@@ -36,6 +38,7 @@ export default async function InicioAlumnoPage() {
 
     return (
       <Pantalla titulo={titulo}>
+        <AvisoInstalar />
         <section className={styles.tarjeta}>
           <h2 className={styles.tarjetaTitulo}>¡Terminaste el plan!</h2>
           <p className={styles.progreso}>
@@ -62,6 +65,7 @@ export default async function InicioAlumnoPage() {
 
   return (
     <Pantalla titulo={titulo}>
+        <AvisoInstalar />
       <section className={styles.tarjeta}>
         <p className={styles.etiqueta}>Te toca:</p>
         <h2 className={styles.tarjetaTitulo}>

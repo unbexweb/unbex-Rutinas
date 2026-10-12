@@ -43,7 +43,7 @@ export default async function ProfesPage() {
             {(data ?? []).map((p) => (
               <tr key={p.id}>
                 <td>
-                  {p.apellido}, {p.nombre}
+                  {p.rol === "profe" ? <Link href={`/panel/profes/${p.id}`}>{p.apellido}, {p.nombre}</Link> : <>{p.apellido}, {p.nombre}</>}
                 </td>
                 <td>{p.dni}</td>
                 <td>{p.email}</td>
