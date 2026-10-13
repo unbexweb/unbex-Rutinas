@@ -9,6 +9,7 @@ export type SerieVista = { peso: string; reps: string };
 
 export type ItemVista = {
   beId: string;
+  bloqueId: string;
   bloqueNombre: string;
   bloqueIndicacion: string | null;
   // Tal cual los cargó el profe: no se interpretan ni se traducen.
@@ -20,7 +21,7 @@ export type ItemVista = {
   ejercicio: EjercicioVista;
   alternativa: EjercicioVista | null;
   nSeries: number;
-  guardado: { ejercicioUsadoId: string | null; series: SerieVista[] };
+  guardado: { ejercicioUsadoId: string | null; series: SerieVista[]; hecho: boolean };
   // "La última vez" por ejercicio (id del ejercicio → texto), o null si no hay datos.
   ultima: Record<string, string | null>;
 };

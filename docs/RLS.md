@@ -26,6 +26,7 @@ Todo está **restringido al gym del usuario** (`gym_id`); un usuario de otro gym
 | `asignaciones` | — | S (las propias) | S (las propias) · U solo progreso | S, I, U, D (alumnos del gym) | S, I, U, D (alumnos del gym) |
 | `registros_sesion` | — | S (los propios) | S, I, U (los propios, de sesiones de su asignación activa) | S, I, U, D (gym) | S, I, U, D (gym) |
 | `registros_series` | — | S (los propios) | S, I, U (los propios) | S, I, U, D (gym) | S, I, U, D (gym) |
+| `registros_ejercicios` | — | S (los propios) | S, I, U (los propios, de ejercicios de esa sesión; no borra) | S, I, U, D (gym) | S, I, U, D (gym) |
 | `solicitudes_ciclo` | — | S (las propias) | S (las propias) · I (solo con asignación finalizada) | S, U (atender) | S, U (atender) |
 
 ## Detalles que no entran en la tabla
@@ -90,3 +91,7 @@ Editar bloques y ejercicios con **`UPDATE` en el lugar**; no borrar y reinsertar
 - El resto del panel (editor de planes, alumnos, ejercicios, solicitudes) usa el cliente con sesión del usuario: RLS sigue filtrando por gym.
 - El editor de planes edita con `UPDATE` en el lugar (cambiar ejercicio, series, orden...). Solo se borra cuando el profe quita algo a propósito. `copiar_semana` sí reemplaza los bloques de la semana destino, así que las series ya registradas en ellos quedan con `bloque_ejercicio_id` nulo.
 - Un plan con asignaciones (activas o históricas) no se puede eliminar; el panel lo avisa antes de llegar al error de la base.
+
+## Marcas de "hecho" (`registros_ejercicios`)
+
+El entrenamiento es una sola pantalla con todos los ejercicios en el orden que quiera el alumno, así que hace falta guardar cuáles marcó. Una fila por (registro de la sesión, ejercicio del plan) con `hecho`; desmarcar es `hecho = false` (el alumno no borra). Se borra en cascada con el registro y con el ejercicio del plan. Las sesiones hechas antes de esta tabla (sin ninguna marca) se muestran con ✓ en los ejercicios que tienen algo registrado.

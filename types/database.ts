@@ -424,6 +424,48 @@ export type Database = {
           },
         ]
       }
+      registros_ejercicios: {
+        Row: {
+          bloque_ejercicio_id: string
+          created_at: string
+          hecho: boolean
+          id: string
+          registro_id: string
+          updated_at: string
+        }
+        Insert: {
+          bloque_ejercicio_id: string
+          created_at?: string
+          hecho?: boolean
+          id?: string
+          registro_id: string
+          updated_at?: string
+        }
+        Update: {
+          bloque_ejercicio_id?: string
+          created_at?: string
+          hecho?: boolean
+          id?: string
+          registro_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registros_ejercicios_bloque_ejercicio_id_fkey"
+            columns: ["bloque_ejercicio_id"]
+            isOneToOne: false
+            referencedRelation: "bloque_ejercicios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registros_ejercicios_registro_id_fkey"
+            columns: ["registro_id"]
+            isOneToOne: false
+            referencedRelation: "registros_sesion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       registros_series: {
         Row: {
           bloque_ejercicio_id: string | null

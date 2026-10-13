@@ -1,15 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Boton } from "@/components/ui/Boton";
 import { Mensaje } from "@/components/ui/Mensaje";
-import type { EntrenamientoVista, EjercicioVista, ItemVista, SerieVista } from "@/lib/alumno/entrenar-tipos";
-import { guardarEjercicio, terminarEntrenamiento } from "./actions";
+import type { EjercicioVista, EntrenamientoVista, ItemVista, SerieVista } from "@/lib/alumno/entrenar-tipos";
+import { guardarEjercicio, marcarEjercicio, terminarEntrenamiento } from "./actions";
 import styles from "./entrenamiento.module.css";
 
 const YOUTUBE_ID = /^[\w-]{11}$/;
+const ERROR_RED = "No pudimos guardar. Revisá tu conexión y probá de nuevo.";
 
 function Video({ ejercicio }: { ejercicio: EjercicioVista }) {
   const [visible, setVisible] = useState(false);
@@ -41,20 +41,20 @@ function Video({ ejercicio }: { ejercicio: EjercicioVista }) {
   );
 }
 
-function resumenSeries(series: SerieVista[]): string {
-  const hechas = series
-    .map((s, i) => ({ ...s, n: i + 1 }))
-    .filter((s) => s.peso || s.reps)
-    .map((s) => `${s.peso ? `${s.peso} kg` : "—"} × ${s.reps || "—"}`);
-  return hechas.length ? hechas.join(" · ") : "Sin registrar";
+// "3 × 6/8" y la carga, tal cual los cargó el profe.
+function detalleDe(it: ItemVista): string {
+  const sxr = it.series && it.reps ? `${it.series} × ${it.reps}` : it.series ? `${it.series} series` : it.reps ? `${it.reps} reps` : "";
+  return [sxr, it.cargaSugerida].filter(Boolean).join(" · ");
 }
+
+const textoSerie = (s: SerieVista) =>
+  s.peso || s.reps ? `${s.peso ? `${s.peso} kg` : "—"} × ${s.reps || "—"}` : "Sin registrar";
 
 export function Entrenamiento({ vista }: { vista: EntrenamientoVista }) {
   const router = useRouter();
-  const { items, modo } = vista;
-  const editable = modo === "editar";
+  const { items } = vista;
+  const editable = vista.modo === "editar";
 
-  const [paso, setPaso] = useState(0);
   const [elegidos, setElegidos] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       items.map((it) => {
@@ -67,43 +67,106 @@ export function Entrenamiento({ vista }: { vista: EntrenamientoVista }) {
   const [valores, setValores] = useState<Record<string, SerieVista[]>>(() =>
     Object.fromEntries(items.map((it) => [it.beId, it.guardado.series])),
   );
-  const [error, setError] = useState<string | null>(null);
-  const [ocupado, empezar] = useTransition();
+  const [hechos, setHechos] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(items.map((it) => [it.beId, it.guardado.hecho])),
+  );
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const [error, setError] = useState<{ beId: string | null; texto: string } | null>(null);
+  const [ocupado, setOcupado] = useState<string | null>(null); // ejercicio guardándose
+  const [terminando, empezar] = useTransition();
+  // Lo último que se sabe guardado en la base, para no guardar de más.
+  const guardado = useRef<Record<string, string>>(
+    Object.fromEntries(items.map((it) => [it.beId, JSON.stringify(it.guardado.series)])),
+  );
 
-  const enResumen = paso >= items.length;
-  const item: ItemVista | undefined = items[paso];
+  const cantidadHechos = items.filter((it) => hechos[it.beId]).length;
+  const grupos = items.reduce<{ id: string; nombre: string; indicacion: string | null; items: ItemVista[] }[]>(
+    (acc, it) => {
+      const ultimo = acc[acc.length - 1];
+      if (ultimo?.id === it.bloqueId) ultimo.items.push(it);
+      else acc.push({ id: it.bloqueId, nombre: it.bloqueNombre, indicacion: it.bloqueIndicacion, items: [it] });
+      return acc;
+    },
+    [],
+  );
 
-  function cambiarValor(beId: string, i: number, campo: keyof SerieVista, valor: string) {
-    setValores((v) => ({
-      ...v,
-      [beId]: (v[beId] ?? []).map((s, j) => (j === i ? { ...s, [campo]: valor } : s)),
-    }));
+  const sucio = (it: ItemVista) => JSON.stringify(valores[it.beId] ?? []) !== guardado.current[it.beId];
+
+  async function guardarSerie(it: ItemVista, marcarHecho: boolean): Promise<boolean> {
+    const series = valores[it.beId] ?? [];
+    const res = await guardarEjercicio({
+      asignacionId: vista.asignacionId,
+      sesionId: vista.sesionId,
+      beId: it.beId,
+      ejercicioUsadoId: elegidos[it.beId] ?? it.ejercicio.id,
+      series,
+      marcarHecho,
+    }).catch(() => ({ ok: false as const, error: ERROR_RED }));
+    if (res.ok) {
+      guardado.current[it.beId] = JSON.stringify(series);
+      return true;
+    }
+    setError({ beId: it.beId, texto: res.error });
+    return false;
   }
 
-  function siguiente() {
-    if (!item) return;
+  // Al pasar a otro ejercicio se guarda en silencio lo que había escrito (sin marcarlo como hecho).
+  function guardarSiHaceFalta(beId: string | null) {
+    const it = items.find((x) => x.beId === beId);
+    if (!editable || !it || !it.registraCarga || !sucio(it)) return;
+    void guardarSerie(it, false);
+  }
+
+  function tocar(it: ItemVista) {
     setError(null);
-    if (!editable || !item.registraCarga) {
-      setPaso(paso + 1);
+    if (it.registraCarga) {
+      guardarSiHaceFalta(abierto);
+      setAbierto(abierto === it.beId ? null : it.beId);
       return;
     }
-    empezar(async () => {
-      const res = await guardarEjercicio({
-        asignacionId: vista.asignacionId,
-        sesionId: vista.sesionId,
-        beId: item.beId,
-        ejercicioUsadoId: elegidos[item.beId] ?? item.ejercicio.id,
-        series: valores[item.beId] ?? [],
-      }).catch(() => ({ ok: false as const, error: "No pudimos guardar. Revisá tu conexión y probá de nuevo." }));
-      // Si falla, se queda en esta pantalla con todo lo escrito.
-      if (res.ok) setPaso(paso + 1);
-      else setError(res.error);
-    });
+    if (!editable) return;
+    const nuevo = !hechos[it.beId];
+    setHechos((h) => ({ ...h, [it.beId]: nuevo }));
+    void marcarEjercicio({
+      asignacionId: vista.asignacionId,
+      sesionId: vista.sesionId,
+      beId: it.beId,
+      hecho: nuevo,
+    })
+      .catch(() => ({ ok: false as const, error: ERROR_RED }))
+      .then((res) => {
+        if (res.ok) return;
+        setHechos((h) => ({ ...h, [it.beId]: !nuevo })); // vuelve a como estaba
+        setError({ beId: null, texto: res.error });
+      });
+  }
+
+  async function listo(it: ItemVista) {
+    setError(null);
+    setOcupado(it.beId);
+    const ok = await guardarSerie(it, true);
+    setOcupado(null);
+    if (ok) {
+      setHechos((h) => ({ ...h, [it.beId]: true }));
+      setAbierto(null);
+    }
+  }
+
+  function cambiarValor(beId: string, i: number, campo: keyof SerieVista, valor: string) {
+    setValores((v) => ({ ...v, [beId]: (v[beId] ?? []).map((s, j) => (j === i ? { ...s, [campo]: valor } : s)) }));
   }
 
   function terminar() {
     setError(null);
+    const faltan = items.length - cantidadHechos;
+    if (faltan > 0 && !window.confirm(`Te faltan ${faltan} ${faltan === 1 ? "ejercicio" : "ejercicios"}. ¿Terminar igual?`)) {
+      return;
+    }
     empezar(async () => {
+      // Si dejó un ejercicio abierto con cosas escritas, se guardan antes de cerrar.
+      const abiertoItem = items.find((x) => x.beId === abierto);
+      if (abiertoItem?.registraCarga && sucio(abiertoItem) && !(await guardarSerie(abiertoItem, false))) return;
+
       const res = await terminarEntrenamiento(vista.asignacionId, vista.sesionId).catch(() => ({
         ok: false as const,
         error: "No pudimos cerrar el entrenamiento. Revisá tu conexión y probá de nuevo.",
@@ -111,48 +174,11 @@ export function Entrenamiento({ vista }: { vista: EntrenamientoVista }) {
       if (res.ok) {
         router.push("/inicio");
         router.refresh();
-      } else setError(res.error);
+      } else setError({ beId: null, texto: res.error });
     });
   }
 
-  const titulo = `Semana ${vista.semana} · Estímulo ${vista.estimulo}`;
-
-  if (enResumen) {
-    return (
-      <main className={styles.pantalla}>
-        <p className={styles.sesion}>{titulo}</p>
-        <h1 className={styles.titulo}>{editable ? "¡Muy bien!" : "Lo que registraste"}</h1>
-        <ul className={styles.resumen}>
-          {items
-            .filter((it) => it.registraCarga)
-            .map((it) => {
-              const usado = [it.ejercicio, it.alternativa].find((e) => e?.id === elegidos[it.beId]) ?? it.ejercicio;
-              return (
-                <li key={it.beId} className={styles.resumenItem}>
-                  <strong>{usado.nombre}</strong>
-                  <span>{resumenSeries(valores[it.beId] ?? [])}</span>
-                </li>
-              );
-            })}
-        </ul>
-        {error && <Mensaje tipo="error">{error}</Mensaje>}
-        <div className={styles.barra}>
-          <Boton variante="secundario" type="button" onClick={() => setPaso(items.length - 1)} disabled={ocupado}>
-            Anterior
-          </Boton>
-          {editable ? (
-            <Boton type="button" onClick={terminar} cargando={ocupado}>
-              Terminé
-            </Boton>
-          ) : (
-            <Boton href="/plan">Volver al plan</Boton>
-          )}
-        </div>
-      </main>
-    );
-  }
-
-  if (!item) {
+  if (!items.length) {
     return (
       <main className={styles.pantalla}>
         <Mensaje>Este entrenamiento todavía no tiene ejercicios cargados.</Mensaje>
@@ -161,120 +187,159 @@ export function Entrenamiento({ vista }: { vista: EntrenamientoVista }) {
     );
   }
 
-  const usadoId = elegidos[item.beId] ?? item.ejercicio.id;
-  const usado = item.alternativa && item.alternativa.id === usadoId ? item.alternativa : item.ejercicio;
-  const ultima = item.ultima[usadoId];
-
   return (
     <main className={styles.pantalla}>
-      <p className={styles.sesion}>
-        {titulo} · Ejercicio {paso + 1} de {items.length}
-      </p>
-      <header className={styles.bloque}>
-        <h2 className={styles.bloqueNombre}>{item.bloqueNombre}</h2>
-        {item.bloqueIndicacion && <p>{item.bloqueIndicacion}</p>}
+      <header className={styles.encabezado}>
+        <h1 className={styles.titulo}>
+          Semana {vista.semana} · Estímulo {vista.estimulo}
+        </h1>
+        <p className={styles.avance}>
+          {cantidadHechos} de {items.length} hechos
+        </p>
+        <progress className={styles.barraAvance} value={cantidadHechos} max={items.length} aria-label="Avance" />
+        {!editable && <p className={styles.lectura}>Entrenamiento ya hecho: lo que registraste.</p>}
       </header>
 
-      <section className={styles.ejercicio}>
-        <h1 className={styles.titulo}>{usado.nombre}</h1>
-        <dl className={styles.datos}>
-          {item.series && (
-            <div>
-              <dt>Series</dt>
-              <dd>{item.series}</dd>
-            </div>
-          )}
-          {item.reps && (
-            <div>
-              <dt>Reps</dt>
-              <dd>{item.reps}</dd>
-            </div>
-          )}
-          {item.cargaSugerida && (
-            <div>
-              <dt>Carga</dt>
-              <dd>{item.cargaSugerida}</dd>
-            </div>
-          )}
-        </dl>
-        {item.nota && <p className={styles.nota}>{item.nota}</p>}
+      {error && !error.beId && <Mensaje tipo="error">{error.texto}</Mensaje>}
 
-        {item.alternativa && (
-          <fieldset className={styles.alternativas} disabled={!editable}>
-            <legend>¿Cuál hiciste?</legend>
-            {[item.ejercicio, item.alternativa].map((e) => (
-              <button
-                key={e.id}
-                type="button"
-                className={`${styles.alternativa} ${e.id === usadoId ? styles.elegida : ""}`}
-                aria-pressed={e.id === usadoId}
-                onClick={() => setElegidos((x) => ({ ...x, [item.beId]: e.id }))}
-              >
-                {e.nombre}
-              </button>
-            ))}
-          </fieldset>
-        )}
-
-        <Video key={usado.id} ejercicio={usado} />
-      </section>
-
-      {item.registraCarga && (
-        <section className={styles.series} aria-label="Registro de series">
-          {editable && (
-            <p className={styles.ultima}>
-              {ultima ? `La última vez: ${ultima}` : "Todavía no lo registraste antes."}
-            </p>
-          )}
-          {(valores[item.beId] ?? []).map((serie, i) => (
-            <div key={i} className={styles.fila}>
-              <span className={styles.serieN}>Serie {i + 1}</span>
-              {editable ? (
+      {grupos.map((g) => (
+        <section key={g.id} className={styles.grupo} aria-labelledby={`b-${g.id}`}>
+          <h2 id={`b-${g.id}`} className={styles.grupoTitulo}>
+            {g.nombre}
+          </h2>
+          {g.indicacion && <p className={styles.indicacion}>{g.indicacion}</p>}
+          <ul className={styles.lista}>
+            {g.items.map((it) => {
+              const usadoId = elegidos[it.beId] ?? it.ejercicio.id;
+              const usado = it.alternativa && it.alternativa.id === usadoId ? it.alternativa : it.ejercicio;
+              const hecho = Boolean(hechos[it.beId]);
+              const abiertoAca = abierto === it.beId;
+              const detalle = detalleDe(it);
+              const contenido = (
                 <>
-                  <label className={styles.campo}>
-                    <span>Peso (kg)</span>
-                    <input
-                      inputMode="decimal"
-                      autoComplete="off"
-                      value={serie.peso}
-                      onChange={(e) => cambiarValor(item.beId, i, "peso", e.target.value)}
-                    />
-                  </label>
-                  <label className={styles.campo}>
-                    <span>Reps</span>
-                    <input
-                      inputMode="numeric"
-                      autoComplete="off"
-                      value={serie.reps}
-                      onChange={(e) => cambiarValor(item.beId, i, "reps", e.target.value)}
-                    />
-                  </label>
+                  <span className={`${styles.check} ${hecho ? styles.checkHecho : ""}`} aria-hidden="true">
+                    {hecho ? "✓" : ""}
+                  </span>
+                  <span className={styles.textoFila}>
+                    <span className={styles.nombre}>{usado.nombre}</span>
+                    {detalle && <span className={styles.detalle}>{detalle}</span>}
+                    {!it.registraCarga && it.nota && <span className={styles.detalle}>{it.nota}</span>}
+                  </span>
+                  {it.registraCarga && (
+                    <span className={styles.flecha} aria-hidden="true">
+                      {abiertoAca ? "▴" : "▾"}
+                    </span>
+                  )}
                 </>
-              ) : (
-                <span className={styles.leido}>
-                  {serie.peso || serie.reps ? `${serie.peso ? `${serie.peso} kg` : "—"} × ${serie.reps || "—"}` : "Sin registrar"}
-                </span>
-              )}
-            </div>
-          ))}
-        </section>
-      )}
+              );
+              const clase = `${styles.fila} ${hecho ? styles.filaHecha : ""}`;
+              const estado = hecho ? ", hecho" : ", sin hacer";
 
-      {error && <Mensaje tipo="error">{error}</Mensaje>}
+              return (
+                <li key={it.beId} className={styles.item}>
+                  {!it.registraCarga && !editable ? (
+                    <div className={clase}>
+                      {contenido}
+                      <span className={styles.soloLectura}>{estado.slice(2)}</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className={clase}
+                      onClick={() => tocar(it)}
+                      aria-expanded={it.registraCarga ? abiertoAca : undefined}
+                      aria-pressed={it.registraCarga ? undefined : hecho}
+                      aria-label={it.registraCarga ? `${usado.nombre}${detalle ? `, ${detalle}` : ""}${estado}` : undefined}
+                    >
+                      {contenido}
+                    </button>
+                  )}
+
+                  {abiertoAca && it.registraCarga && (
+                    <div className={styles.panel}>
+                      {it.nota && <p className={styles.nota}>{it.nota}</p>}
+
+                      {it.alternativa && (
+                        <fieldset className={styles.alternativas} disabled={!editable}>
+                          <legend>¿Cuál hiciste?</legend>
+                          {[it.ejercicio, it.alternativa].map((e) => (
+                            <button
+                              key={e.id}
+                              type="button"
+                              className={`${styles.alternativa} ${e.id === usadoId ? styles.elegida : ""}`}
+                              aria-pressed={e.id === usadoId}
+                              onClick={() => setElegidos((x) => ({ ...x, [it.beId]: e.id }))}
+                            >
+                              {e.nombre}
+                            </button>
+                          ))}
+                        </fieldset>
+                      )}
+
+                      <Video key={usado.id} ejercicio={usado} />
+
+                      {editable && (
+                        <p className={styles.ultima}>
+                          {it.ultima[usadoId] ? `La última vez: ${it.ultima[usadoId]}` : "Todavía no lo registraste antes."}
+                        </p>
+                      )}
+
+                      <div className={styles.series}>
+                        {(valores[it.beId] ?? []).map((serie, i) => (
+                          <div key={i} className={styles.filaSerie}>
+                            <span className={styles.serieN}>Serie {i + 1}</span>
+                            {editable ? (
+                              <>
+                                <label className={styles.campo}>
+                                  <span>Peso (kg)</span>
+                                  <input
+                                    inputMode="decimal"
+                                    autoComplete="off"
+                                    value={serie.peso}
+                                    onChange={(ev) => cambiarValor(it.beId, i, "peso", ev.target.value)}
+                                  />
+                                </label>
+                                <label className={styles.campo}>
+                                  <span>Reps</span>
+                                  <input
+                                    inputMode="numeric"
+                                    autoComplete="off"
+                                    value={serie.reps}
+                                    onChange={(ev) => cambiarValor(it.beId, i, "reps", ev.target.value)}
+                                  />
+                                </label>
+                              </>
+                            ) : (
+                              <span className={styles.leido}>{textoSerie(serie)}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {error?.beId === it.beId && <Mensaje tipo="error">{error.texto}</Mensaje>}
+
+                      {editable && (
+                        <Boton type="button" onClick={() => listo(it)} cargando={ocupado === it.beId}>
+                          Listo
+                        </Boton>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
 
       <div className={styles.barra}>
-        {paso > 0 ? (
-          <Boton variante="secundario" type="button" onClick={() => { setError(null); setPaso(paso - 1); }} disabled={ocupado}>
-            Anterior
+        {editable ? (
+          <Boton type="button" onClick={terminar} cargando={terminando}>
+            Terminé
           </Boton>
         ) : (
-          <Link href={editable ? "/inicio" : "/plan"} className={styles.salir}>
-            Salir
-          </Link>
+          <Boton href="/plan">Volver al plan</Boton>
         )}
-        <Boton type="button" onClick={siguiente} cargando={ocupado}>
-          Siguiente
-        </Boton>
       </div>
     </main>
   );

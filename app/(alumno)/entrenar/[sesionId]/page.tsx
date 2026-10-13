@@ -68,7 +68,7 @@ export default async function EntrenarPage({ params }: { params: Promise<{ sesio
 
   const { data: registro } = await supabase
     .from("registros_sesion")
-    .select("id")
+    .select("id, completada")
     .eq("asignacion_id", asignacion.id)
     .eq("sesion_id", sesionId)
     .maybeSingle();
@@ -78,6 +78,10 @@ export default async function EntrenarPage({ params }: { params: Promise<{ sesio
         .from("registros_series")
         .select("bloque_ejercicio_id, ejercicio_usado_id, n_serie, peso, reps")
         .eq("registro_id", registro.id)
+    : { data: [] };
+
+  const { data: marcados } = registro
+    ? await supabase.from("registros_ejercicios").select("bloque_ejercicio_id, hecho").eq("registro_id", registro.id)
     : { data: [] };
 
   const ejercicioIds = new Set<string>();
@@ -132,12 +136,18 @@ export default async function EntrenarPage({ params }: { params: Promise<{ sesio
           reps: fila?.reps != null ? String(fila.reps) : "",
         };
       });
+      // Sesiones hechas antes de existir las marcas (sin ninguna fila de marcas): se dan por hechos los ejercicios con algo registrado.
+      const marca = (marcados ?? []).find((m) => m.bloque_ejercicio_id === be.id);
+      const hecho =
+        marca?.hecho ??
+        Boolean(registro?.completada && !marcados?.length && filas.some((f) => f.peso !== null || f.reps !== null));
       const ultima: Record<string, string | null> = {};
       for (const e of [be.ejercicio, be.alternativa]) {
         if (e) ultima[e.id] = ultimaPorEjercicio.get(e.id) ?? null;
       }
       items.push({
         beId: be.id,
+        bloqueId: b.id,
         bloqueNombre: b.nombre,
         bloqueIndicacion: b.indicacion,
         series: be.series,
@@ -148,7 +158,7 @@ export default async function EntrenarPage({ params }: { params: Promise<{ sesio
         ejercicio: vistaEjercicio(be.ejercicio),
         alternativa: be.alternativa ? vistaEjercicio(be.alternativa) : null,
         nSeries,
-        guardado: { ejercicioUsadoId: filas[0]?.ejercicio_usado_id ?? null, series },
+        guardado: { ejercicioUsadoId: filas[0]?.ejercicio_usado_id ?? null, series, hecho },
         ultima,
       });
     }
