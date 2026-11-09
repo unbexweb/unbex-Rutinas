@@ -7,6 +7,8 @@ import { texto, type EstadoForm } from "@/lib/auth/validar";
 
 const TIPOS = ["Volumen", "Definición", "Otro"];
 
+// Pedir el próximo ciclo está disponible siempre (también con entrenamientos pendientes):
+// la función de la base finaliza la asignación y crea la solicitud en un solo paso.
 export async function pedirProximoCiclo(_prev: EstadoForm, formData: FormData): Promise<EstadoForm> {
   const usuario = await getUsuario();
   if (!usuario) return { error: "Tu sesión se cerró. Volvé a entrar." };
@@ -17,25 +19,13 @@ export async function pedirProximoCiclo(_prev: EstadoForm, formData: FormData): 
   if (!TIPOS.includes(tipo)) return { error: "Elegí qué ciclo querés." };
 
   const supabase = await createClient();
+  const { error } = await supabase.rpc("pedir_proximo_ciclo", {
+    p_asignacion_id: asignacionId,
+    p_tipo: tipo,
+    p_nota: nota,
+  });
+  if (error) return { error: "No pudimos enviar el pedido. Probá de nuevo en un rato." };
 
-  // Una sola solicitud pendiente por asignación.
-  const { data: previa } = await supabase
-    .from("solicitudes_ciclo")
-    .select("id")
-    .eq("asignacion_id", asignacionId)
-    .eq("estado", "pendiente")
-    .limit(1);
-  if (!previa?.length) {
-    // RLS exige que la asignación sea del alumno y esté finalizada.
-    const { error } = await supabase.from("solicitudes_ciclo").insert({
-      alumno_id: usuario.user.id,
-      asignacion_id: asignacionId,
-      tipo_solicitado: tipo,
-      nota: nota || null,
-    });
-    if (error) return { error: "No pudimos enviar el pedido. Probá de nuevo en un rato." };
-  }
-
-  revalidatePath("/inicio");
-  return {};
+  revalidatePath("/", "layout");
+  return { ok: "Pedido enviado" };
 }

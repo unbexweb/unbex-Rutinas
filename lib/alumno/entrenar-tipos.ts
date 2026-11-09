@@ -5,13 +5,19 @@ export type EjercicioVista = {
   videoUrl: string | null;
 };
 
-export type SerieVista = { peso: string; reps: string };
+// Una serie: lo escrito (peso, reps) y si está tildada como hecha.
+export type SerieVista = { peso: string; reps: string; hecha: boolean };
+
+// Lo que hizo la última vez en esa misma serie (n_serie), para la columna "Anterior".
+export type SerieAnterior = { peso: string; reps: string };
 
 export type ItemVista = {
   beId: string;
   bloqueId: string;
   bloqueNombre: string;
   bloqueIndicacion: string | null;
+  // Super serie: letra A, B, C… (los ejercicios del mismo grupo dentro de un bloque se hacen seguidos).
+  grupo: string | null;
   // Tal cual los cargó el profe: no se interpretan ni se traducen.
   series: string | null;
   reps: string | null;
@@ -22,8 +28,8 @@ export type ItemVista = {
   alternativa: EjercicioVista | null;
   nSeries: number;
   guardado: { ejercicioUsadoId: string | null; series: SerieVista[]; hecho: boolean };
-  // "La última vez" por ejercicio (id del ejercicio → texto), o null si no hay datos.
-  ultima: Record<string, string | null>;
+  // Por ejercicio (id del ejercicio): las series de la última vez que lo hizo.
+  anterior: Record<string, SerieAnterior[]>;
 };
 
 export type EntrenamientoVista = {

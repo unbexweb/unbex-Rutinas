@@ -27,7 +27,7 @@ export default async function EditorPlanPage({ params }: { params: Promise<{ id:
          bloques (
            id, orden, nombre, indicacion,
            bloque_ejercicios (
-             id, orden, ejercicio_id, alternativa_id, series, reps, carga_sugerida, registra_carga, nota
+             id, orden, ejercicio_id, alternativa_id, series, reps, carga_sugerida, registra_carga, nota, grupo
            )
          )`,
       )

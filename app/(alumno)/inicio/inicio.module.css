@@ -1,3 +1,4 @@
+/* Tarjeta principal: violeta con texto blanco (contraste alto) */
 .tarjeta {
   display: flex;
   flex-direction: column;
@@ -5,15 +6,21 @@
   padding: var(--space-6);
   background: var(--color-violeta);
   color: var(--color-blanco);
-  border-radius: var(--radius);
+  border-radius: 1rem;
+  box-shadow: var(--sombra-tarjeta);
 }
 
-/* En la tarjeta violeta, el botón primario se invierte para mantener el contraste. */
+/* En la tarjeta violeta, el botón se invierte para mantener el contraste. */
 .tarjeta :global(a),
 .tarjeta :global(button) {
   background: var(--color-blanco);
   color: var(--color-violeta);
   border-color: var(--color-blanco);
+}
+
+.tarjeta :global(a:focus-visible),
+.tarjeta :global(button:focus-visible) {
+  outline-color: var(--color-blanco);
 }
 
 .etiqueta {
@@ -31,51 +38,32 @@
 
 .barra {
   width: 100%;
-  height: 12px;
-  accent-color: var(--color-rosa);
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.fieldset {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  height: 0.75rem;
+  appearance: none;
   border: 0;
-  padding: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.3);
+  accent-color: var(--color-blanco);
 }
 
-.legend {
-  font-weight: 600;
-  margin-bottom: var(--space-2);
+.barra::-webkit-progress-bar {
+  background: rgb(255 255 255 / 0.3);
 }
 
-.opcion {
-  display: flex;
+.barra::-webkit-progress-value {
+  background: var(--color-blanco);
+  border-radius: 999px;
+}
+
+.barra::-moz-progress-bar {
+  background: var(--color-blanco);
+  border-radius: 999px;
+}
+
+.enlace {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
   min-height: var(--tap-min);
-  padding: 0 var(--space-4);
-  background: var(--color-blanco);
-  border: 2px solid var(--color-borde);
-  border-radius: var(--radius);
-}
-
-.opcion input {
-  width: 24px;
-  min-height: 24px;
-  accent-color: var(--color-violeta);
-}
-
-.textarea {
-  width: 100%;
-  min-height: 96px;
-  padding: var(--space-3) var(--space-4);
-  border: 2px solid var(--color-borde);
-  border-radius: var(--radius);
-  background: var(--color-blanco);
+  font-weight: 700;
 }

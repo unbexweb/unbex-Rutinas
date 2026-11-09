@@ -1,20 +1,39 @@
 "use client";
 
 import { useActionState } from "react";
+import { pedirProximoCiclo } from "@/app/(alumno)/inicio/actions";
 import { Boton } from "@/components/ui/Boton";
 import { Mensaje } from "@/components/ui/Mensaje";
 import type { EstadoForm } from "@/lib/auth/validar";
-import { pedirProximoCiclo } from "./actions";
-import styles from "./inicio.module.css";
+import styles from "./FormSolicitud.module.css";
 
 const TIPOS = ["Volumen", "Definición", "Otro"];
 
-export function FormSolicitud({ asignacionId }: { asignacionId: string }) {
+type Props = {
+  asignacionId: string;
+  // Entrenamientos que todavía no hizo: si quedan, se pide confirmación antes de enviar.
+  pendientes?: number;
+};
+
+export function FormSolicitud({ asignacionId, pendientes = 0 }: Props) {
   const [estado, accion] = useActionState<EstadoForm, FormData>(pedirProximoCiclo, {});
 
   return (
-    <form action={accion} className={styles.form}>
-      <h2>Pedí tu próximo ciclo</h2>
+    <form
+      action={accion}
+      className={styles.form}
+      onSubmit={(ev) => {
+        if (
+          pendientes > 0 &&
+          !window.confirm(
+            `Te quedan ${pendientes} ${pendientes === 1 ? "entrenamiento" : "entrenamientos"}. ¿Pedir el próximo ciclo igual?`,
+          )
+        ) {
+          ev.preventDefault();
+        }
+      }}
+    >
+      <h2 className={styles.titulo}>Pedí tu próximo ciclo</h2>
       {estado.error && <Mensaje tipo="error">{estado.error}</Mensaje>}
       <input type="hidden" name="asignacion_id" value={asignacionId} />
       <fieldset className={styles.fieldset}>
@@ -26,7 +45,7 @@ export function FormSolicitud({ asignacionId }: { asignacionId: string }) {
           </label>
         ))}
       </fieldset>
-      <div>
+      <div className={styles.nota}>
         <label htmlFor="nota" className={styles.legend}>
           Comentario (opcional)
         </label>

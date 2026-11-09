@@ -1,12 +1,12 @@
+import { FormSolicitud } from "@/components/alumno/FormSolicitud";
 import { AvisoInstalar } from "@/components/pwa/AvisoInstalar";
-import { BotonCerrarSesion } from "@/components/ui/BotonCerrarSesion";
 import { Boton } from "@/components/ui/Boton";
+import { BotonCerrarSesion } from "@/components/ui/BotonCerrarSesion";
 import { Mensaje } from "@/components/ui/Mensaje";
 import { Pantalla } from "@/components/ui/Pantalla";
-import { getAsignacion, hechos, SESIONES_POR_PLAN } from "@/lib/alumno/datos";
+import { getAsignacion, getProgreso, SESIONES_POR_PLAN } from "@/lib/alumno/datos";
 import { getUsuario } from "@/lib/auth/usuario";
 import { createClient } from "@/lib/supabase/server";
-import { FormSolicitud } from "./form-solicitud";
 import styles from "./inicio.module.css";
 
 export const metadata = { title: "Inicio · Unbex Rutinas" };
@@ -27,6 +27,7 @@ export default async function InicioAlumnoPage() {
   }
 
   const supabase = await createClient();
+  const { hechos } = await getProgreso(asignacion.id);
 
   if (asignacion.estado === "finalizada") {
     const { data: pendiente } = await supabase
@@ -35,14 +36,15 @@ export default async function InicioAlumnoPage() {
       .eq("asignacion_id", asignacion.id)
       .eq("estado", "pendiente")
       .limit(1);
+    const completo = hechos >= SESIONES_POR_PLAN;
 
     return (
       <Pantalla titulo={titulo}>
         <AvisoInstalar />
         <section className={styles.tarjeta}>
-          <h2 className={styles.tarjetaTitulo}>¡Terminaste el plan!</h2>
+          <h2 className={styles.tarjetaTitulo}>{completo ? "¡Terminaste el plan!" : "Cerraste este plan"}</h2>
           <p className={styles.progreso}>
-            {SESIONES_POR_PLAN} de {SESIONES_POR_PLAN} entrenamientos
+            {hechos} de {SESIONES_POR_PLAN} entrenamientos
           </p>
         </section>
         {pendiente?.length ? (
@@ -55,6 +57,7 @@ export default async function InicioAlumnoPage() {
     );
   }
 
+  // El plan es libre: semana_actual/estimulo_actual son el primer pendiente, o sea el sugerido.
   const { data: sesion } = await supabase
     .from("sesiones")
     .select("id")
@@ -65,23 +68,21 @@ export default async function InicioAlumnoPage() {
 
   return (
     <Pantalla titulo={titulo}>
-        <AvisoInstalar />
+      <AvisoInstalar />
       <section className={styles.tarjeta}>
-        <p className={styles.etiqueta}>Te toca:</p>
+        <p className={styles.etiqueta}>Te sugerimos:</p>
         <h2 className={styles.tarjetaTitulo}>
           Semana {asignacion.semana_actual} · Estímulo {asignacion.estimulo_actual}
         </h2>
         <p className={styles.progreso}>
-          {hechos(asignacion)} de {SESIONES_POR_PLAN} entrenamientos
+          {hechos} de {SESIONES_POR_PLAN} entrenamientos
         </p>
-        <progress
-          className={styles.barra}
-          value={hechos(asignacion)}
-          max={SESIONES_POR_PLAN}
-          aria-label="Progreso del plan"
-        />
+        <progress className={styles.barra} value={hechos} max={SESIONES_POR_PLAN} aria-label="Progreso del plan" />
         {sesion && <Boton href={`/entrenar/${sesion.id}`}>Empezar</Boton>}
       </section>
+      <Boton href="/plan" variante="secundario">
+        Elegir otro entrenamiento
+      </Boton>
       <BotonCerrarSesion />
     </Pantalla>
   );

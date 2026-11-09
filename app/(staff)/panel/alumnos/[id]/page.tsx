@@ -5,7 +5,7 @@ import { BotonRestablecer } from "@/components/staff/BotonRestablecer";
 import { Cabecera, Insignia } from "@/components/staff/Cabecera";
 import { SelectorAccion } from "@/components/staff/SelectorAccion";
 import e from "@/components/staff/estilos.module.css";
-import { hechos, SESIONES_POR_PLAN } from "@/lib/alumno/datos";
+import { SESIONES_POR_PLAN } from "@/lib/alumno/datos";
 import { createClient } from "@/lib/supabase/server";
 import { CAMPOS_FICHA } from "@/app/(alumno)/ficha/campos";
 import { asignarPlan, cambiarEstadoAlumno, personalizarPlan, restablecerPasswordAlumno } from "../actions";
@@ -65,6 +65,9 @@ export default async function AlumnoDetallePage({ params }: { params: Promise<{ 
         (b.sesion!.estimulo - a.sesion!.estimulo),
     );
 
+  // Entrenamientos completos de la asignación vigente (el plan es libre: no depende de por dónde va)
+  const hechosActual = actual ? (registros ?? []).filter((r) => r.asignacion_id === actual.id).length : 0;
+
   const fichaCargada = ficha && CAMPOS_FICHA.some((c) => ficha[c.name]);
 
   return (
@@ -120,11 +123,11 @@ export default async function AlumnoDetallePage({ params }: { params: Promise<{ 
                 {actual.estado === "finalizada" ? " · finalizado" : ""}
               </p>
               <p>
-                {hechos(actual)} de {SESIONES_POR_PLAN} entrenamientos
+                {hechosActual} de {SESIONES_POR_PLAN} entrenamientos
                 {actual.estado === "activa" &&
-                  ` · le toca Semana ${actual.semana_actual} · Estímulo ${actual.estimulo_actual}`}
+                  ` · sugerido: Semana ${actual.semana_actual} · Estímulo ${actual.estimulo_actual}`}
               </p>
-              <progress className={e.barra} value={hechos(actual)} max={SESIONES_POR_PLAN} aria-label="Progreso" />
+              <progress className={e.barra} value={hechosActual} max={SESIONES_POR_PLAN} aria-label="Progreso" />
               <div className={e.fila}>
                 {planActual.alumno_id ? (
                   <Link href={`/panel/planes/${planActual.id}`} className={`${e.btn} ${e.btnSec}`}>

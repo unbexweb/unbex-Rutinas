@@ -220,6 +220,22 @@ function FilaEjercicio({
         <CampoAuto etiqueta="Reps" valor={ej.reps ?? ""} onGuardar={(v) => cambiar({ reps: v })} />
         <CampoAuto etiqueta="Carga" valor={ej.carga_sugerida ?? ""} onGuardar={(v) => cambiar({ carga_sugerida: v })} />
       </div>
+      <div className={s.campo}>
+        <label htmlFor={`grupo-${ej.id}`}>Super serie</label>
+        <select
+          id={`grupo-${ej.id}`}
+          className={e.select}
+          value={ej.grupo ?? ""}
+          onChange={(ev) => cambiar({ grupo: ev.target.value || null })}
+        >
+          <option value="">Ninguna</option>
+          {["A", "B", "C"].map((g) => (
+            <option key={g} value={g}>
+              Grupo {g}
+            </option>
+          ))}
+        </select>
+      </div>
       <label className={s.check}>
         <input
           type="checkbox"

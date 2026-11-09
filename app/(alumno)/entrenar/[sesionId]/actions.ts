@@ -1,17 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { posicion } from "@/lib/alumno/datos";
-import type { ResultadoAccion, SerieVista } from "@/lib/alumno/entrenar-tipos";
+import type { ResultadoAccion } from "@/lib/alumno/entrenar-tipos";
 import { createClient } from "@/lib/supabase/server";
 
 type Contexto = { asignacionId: string; sesionId: string; beId: string };
 
-type EntradaGuardar = Contexto & {
+type EntradaSerie = Contexto & {
   ejercicioUsadoId: string;
-  series: SerieVista[];
-  // true en "Listo" (queda con ✓); false cuando solo se guarda lo escrito al pasar a otro ejercicio.
-  marcarHecho: boolean;
+  nSerie: number;
+  // Cuántas series tiene el ejercicio: queda hecho cuando todas están tildadas.
+  totalSeries: number;
+  peso: string;
+  reps: string;
+  hecha: boolean;
 };
 
 const PESO = /^\d{1,5}([.,]\d{1,2})?$/;
@@ -21,31 +23,30 @@ const ERROR_GENERICO = "No pudimos guardar. Revisá tu conexión y probá de nue
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
-// Solo se registra el entrenamiento que le toca. RLS controla el resto.
-// Devuelve el id del registro de la sesión (lo crea si todavía no existe).
+// Plan libre: se puede registrar cualquier entrenamiento de la asignación activa que todavía no esté terminado.
+// RLS controla el resto. Devuelve el id del registro de la sesión (lo crea si todavía no existe).
 async function registroEditable(
   supabase: Supabase,
   { asignacionId, sesionId }: Pick<Contexto, "asignacionId" | "sesionId">,
 ): Promise<{ ok: true; registroId: string } | { ok: false; error: string }> {
   const { data: asignacion } = await supabase
     .from("asignaciones")
-    .select("estado, plan_id, semana_actual, estimulo_actual")
+    .select("estado, plan_id")
     .eq("id", asignacionId)
     .maybeSingle();
-  const { data: sesion } = await supabase
-    .from("sesiones")
-    .select("plan_id, semana, estimulo")
-    .eq("id", sesionId)
-    .maybeSingle();
-  if (
-    !asignacion ||
-    !sesion ||
-    asignacion.estado !== "activa" ||
-    sesion.plan_id !== asignacion.plan_id ||
-    posicion(sesion.semana, sesion.estimulo) !== posicion(asignacion.semana_actual, asignacion.estimulo_actual)
-  ) {
-    return { ok: false, error: "Ese no es el entrenamiento que te toca." };
+  const { data: sesion } = await supabase.from("sesiones").select("plan_id").eq("id", sesionId).maybeSingle();
+  if (!asignacion || !sesion || asignacion.estado !== "activa" || sesion.plan_id !== asignacion.plan_id) {
+    return { ok: false, error: "Ese entrenamiento no se puede editar." };
   }
+
+  const { data: existente } = await supabase
+    .from("registros_sesion")
+    .select("id, completada")
+    .eq("asignacion_id", asignacionId)
+    .eq("sesion_id", sesionId)
+    .maybeSingle();
+  if (existente?.completada) return { ok: false, error: "Ese entrenamiento ya está hecho." };
+  if (existente) return { ok: true, registroId: existente.id };
 
   const { error: errRegistro } = await supabase
     .from("registros_sesion")
@@ -73,28 +74,17 @@ async function marcar(supabase: Supabase, registroId: string, beId: string, hech
     );
 }
 
-export async function guardarEjercicio(entrada: EntradaGuardar): Promise<ResultadoAccion> {
-  const { beId, ejercicioUsadoId } = entrada;
-  if (entrada.series.length > 20) return { ok: false, error: ERROR_GENERICO };
-
-  // Validar y normalizar lo escrito.
-  const llenas: { n_serie: number; peso: number | null; reps: number | null }[] = [];
-  const vacias: number[] = [];
-  for (const [i, s] of entrada.series.entries()) {
-    const peso = s.peso.trim();
-    const reps = s.reps.trim();
-    if (!peso && !reps) {
-      vacias.push(i + 1);
-      continue;
-    }
-    if ((peso && !PESO.test(peso)) || (reps && !REPS.test(reps))) {
-      return { ok: false, error: `Revisá los números de la serie ${i + 1}.` };
-    }
-    llenas.push({
-      n_serie: i + 1,
-      peso: peso ? Number(peso.replace(",", ".")) : null,
-      reps: reps ? Number(reps) : null,
-    });
+// Cada tilde (o cada cambio en una serie ya tildada) guarda esa serie. Si todas las series del ejercicio
+// quedan tildadas, el ejercicio queda hecho; si se destilda alguna, deja de estarlo.
+export async function guardarSerie(entrada: EntradaSerie): Promise<ResultadoAccion & { ejercicioHecho?: boolean }> {
+  const { beId, ejercicioUsadoId, nSerie, totalSeries } = entrada;
+  if (!Number.isInteger(nSerie) || nSerie < 1 || nSerie > 20 || totalSeries < 1 || totalSeries > 20) {
+    return { ok: false, error: ERROR_GENERICO };
+  }
+  const peso = entrada.peso.trim();
+  const reps = entrada.reps.trim();
+  if ((peso && !PESO.test(peso)) || (reps && !REPS.test(reps))) {
+    return { ok: false, error: `Revisá los números de la serie ${nSerie}.` };
   }
 
   try {
@@ -102,42 +92,39 @@ export async function guardarEjercicio(entrada: EntradaGuardar): Promise<Resulta
     const ctx = await registroEditable(supabase, entrada);
     if (!ctx.ok) return ctx;
 
-    if (llenas.length) {
-      const { error } = await supabase.from("registros_series").upsert(
-        llenas.map((s) => ({
-          registro_id: ctx.registroId,
-          bloque_ejercicio_id: beId,
-          ejercicio_usado_id: ejercicioUsadoId,
-          ...s,
-        })),
-        { onConflict: "registro_id,bloque_ejercicio_id,n_serie" },
-      );
-      if (error) return { ok: false, error: ERROR_GENERICO };
-    }
+    const { error } = await supabase.from("registros_series").upsert(
+      {
+        registro_id: ctx.registroId,
+        bloque_ejercicio_id: beId,
+        ejercicio_usado_id: ejercicioUsadoId,
+        n_serie: nSerie,
+        peso: peso ? Number(peso.replace(",", ".")) : null,
+        reps: reps ? Number(reps) : null,
+        hecha: entrada.hecha,
+      },
+      { onConflict: "registro_id,bloque_ejercicio_id,n_serie" },
+    );
+    if (error) return { ok: false, error: ERROR_GENERICO };
 
-    // Si borró lo que había escrito en una serie, se vacía también en la base.
-    if (vacias.length) {
-      const { error } = await supabase
-        .from("registros_series")
-        .update({ peso: null, reps: null, ejercicio_usado_id: ejercicioUsadoId })
-        .eq("registro_id", ctx.registroId)
-        .eq("bloque_ejercicio_id", beId)
-        .in("n_serie", vacias);
-      if (error) return { ok: false, error: ERROR_GENERICO };
-    }
+    const { count } = await supabase
+      .from("registros_series")
+      .select("id", { count: "exact", head: true })
+      .eq("registro_id", ctx.registroId)
+      .eq("bloque_ejercicio_id", beId)
+      .eq("hecha", true)
+      .lte("n_serie", totalSeries);
+    const ejercicioHecho = (count ?? 0) >= totalSeries;
 
-    if (entrada.marcarHecho) {
-      const { error } = await marcar(supabase, ctx.registroId, beId, true);
-      if (error) return { ok: false, error: ERROR_GENERICO };
-    }
+    const { error: errMarca } = await marcar(supabase, ctx.registroId, beId, ejercicioHecho);
+    if (errMarca) return { ok: false, error: ERROR_GENERICO };
 
-    return { ok: true };
+    return { ok: true, ejercicioHecho };
   } catch {
     return { ok: false, error: ERROR_GENERICO };
   }
 }
 
-// Ejercicios que no registran carga (movilidad, activación): un toque los marca o desmarca.
+// Ejercicios que no registran carga: un toque los marca o desmarca.
 export async function marcarEjercicio(entrada: Contexto & { hecho: boolean }): Promise<ResultadoAccion> {
   try {
     const supabase = await createClient();

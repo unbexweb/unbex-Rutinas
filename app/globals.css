@@ -3,6 +3,18 @@
   --color-violeta: #4B2556;
   --color-rosa: #FDE3D8;
 
+  /* Vista del alumno: fondo neutro cálido (el rosa queda para acentos) y superficies */
+  --color-fondo: #F8F4EF;
+  --color-chip: #EFE8F1;
+  --sombra-tarjeta: 0 1px 2px rgb(42 21 48 / 0.06), 0 4px 14px rgb(42 21 48 / 0.08);
+  --ancho-columna: 30rem; /* 480px */
+
+  /* Colores de las super series (cada grupo un color; nunca es la única señal: siempre hay letra) */
+  --color-grupo-a: #00695C;
+  --color-grupo-b: #B34700;
+  --color-grupo-c: #1F5AA6;
+  --color-grupo-d: #8E2C6D;
+
   /* Neutros y estados */
   --color-blanco: #FFFFFF;
   --color-texto: #2A1530;
@@ -98,6 +110,30 @@ h3 {
 :focus-visible {
   outline: 3px solid var(--color-violeta);
   outline-offset: 2px;
+}
+
+/* Texto solo para lectores de pantalla */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @media (min-width: 768px) {

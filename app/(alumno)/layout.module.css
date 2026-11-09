@@ -1,10 +1,12 @@
-/* Zona del alumno: pensada para celular y para gente grande. Texto base de 18px y botones de 56px. */
+/* Zona del alumno: una columna centrada de 480px (también en pantallas grandes), pensada para el celular
+   y para gente grande. Texto base de 18px, texto secundario de 16px como mínimo, áreas táctiles de 56px. */
 .app {
   --fs-base: 1.125rem;
   --fs-sm: 1rem;
-  --tap-min: 56px;
+  --tap-min: 3.5rem;
   font-size: var(--fs-base);
   min-height: 100dvh;
+  background: var(--color-fondo);
   /* lugar para la navegación fija de abajo */
-  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }

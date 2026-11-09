@@ -100,6 +100,7 @@ export type Database = {
           carga_sugerida: string | null
           created_at: string
           ejercicio_id: string
+          grupo: string | null
           id: string
           nota: string | null
           orden: number
@@ -114,6 +115,7 @@ export type Database = {
           carga_sugerida?: string | null
           created_at?: string
           ejercicio_id: string
+          grupo?: string | null
           id?: string
           nota?: string | null
           orden: number
@@ -128,6 +130,7 @@ export type Database = {
           carga_sugerida?: string | null
           created_at?: string
           ejercicio_id?: string
+          grupo?: string | null
           id?: string
           nota?: string | null
           orden?: number
@@ -471,6 +474,7 @@ export type Database = {
           bloque_ejercicio_id: string | null
           created_at: string
           ejercicio_usado_id: string
+          hecha: boolean
           id: string
           n_serie: number
           peso: number | null
@@ -482,6 +486,7 @@ export type Database = {
           bloque_ejercicio_id?: string | null
           created_at?: string
           ejercicio_usado_id: string
+          hecha?: boolean
           id?: string
           n_serie: number
           peso?: number | null
@@ -493,6 +498,7 @@ export type Database = {
           bloque_ejercicio_id?: string | null
           created_at?: string
           ejercicio_usado_id?: string
+          hecha?: boolean
           id?: string
           n_serie?: number
           peso?: number | null
@@ -715,6 +721,10 @@ export type Database = {
       email_por_dni: { Args: { p_dni: string }; Returns: string }
       is_alumno_activo: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
+      pedir_proximo_ciclo: {
+        Args: { p_asignacion_id: string; p_nota: string; p_tipo: string }
+        Returns: string
+      }
       personalizar_plan: {
         Args: { p_alumno_id: string; p_plan_id: string }
         Returns: string

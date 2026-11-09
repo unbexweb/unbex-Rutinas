@@ -14,7 +14,7 @@ export function FormFicha({ ficha }: { ficha: Tables<"fichas_salud"> | null }) {
   const [estado, accion] = useActionState<EstadoForm, FormData>(guardarFicha, {});
 
   return (
-    <form action={accion} className={styles.form}>
+    <form action={accion} className={`${styles.form} ${estilos.tarjeta}`}>
       {estado.error && <Mensaje tipo="error">{estado.error}</Mensaje>}
       {estado.ok && <Mensaje tipo="exito">{estado.ok}</Mensaje>}
       {CAMPOS_FICHA.map((campo) => (

@@ -2,31 +2,45 @@
   font-weight: 700;
 }
 
+.ayuda {
+  font-size: 1rem;
+  color: var(--color-texto-suave);
+}
+
 .semana {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.semanaTitulo {
   font-size: var(--fs-lg);
-  margin-bottom: var(--space-3);
 }
 
 .grilla {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding: 0;
   list-style: none;
 }
 
+/* Cada entrenamiento es una tarjeta tocable; el estado se dice con texto + ícono, no solo con color */
 .celda {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  min-height: 72px;
+  gap: 0.25rem;
+  min-height: 5rem;
   padding: var(--space-2);
-  border: 2px solid var(--color-violeta);
-  border-radius: var(--radius);
-  text-decoration: none;
+  background: var(--color-blanco);
+  border: 0.125rem solid transparent;
+  border-radius: 1rem;
+  box-shadow: var(--sombra-tarjeta);
+  color: var(--color-texto);
   text-align: center;
+  text-decoration: none;
 }
 
 .numero {
@@ -35,25 +49,43 @@
 }
 
 .estado {
-  font-size: var(--fs-sm);
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .hecho {
-  background: var(--color-blanco);
-  color: var(--color-violeta);
+  background: var(--color-exito-fondo);
+  color: var(--color-exito);
 }
 
-.hoy {
+.sugerido {
   background: var(--color-violeta);
+  border-color: var(--color-violeta);
   color: var(--color-blanco);
-  outline: 4px solid var(--color-violeta);
-  outline-offset: 2px;
 }
 
-.siguiente {
-  background: transparent;
-  color: var(--color-texto-suave);
-  border-style: dashed;
-  border-color: var(--color-borde);
+.sugerido:focus-visible {
+  outline-color: var(--color-violeta);
+  outline-offset: 0.25rem;
+}
+
+.pendiente {
+  color: var(--color-texto);
+}
+
+.ciclo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.pedir {
+  min-height: var(--tap-min);
+  padding: 0 var(--space-6);
+  background: var(--color-blanco);
+  border: 0.125rem solid var(--color-violeta);
+  border-radius: 0.75rem;
+  color: var(--color-violeta);
+  font-weight: 700;
 }

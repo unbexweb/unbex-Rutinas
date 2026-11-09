@@ -1,3 +1,10 @@
+.tarjeta {
+  padding: var(--space-6);
+  background: var(--color-blanco);
+  border-radius: 1rem;
+  box-shadow: var(--sombra-tarjeta);
+}
+
 .campo {
   display: flex;
   flex-direction: column;
@@ -5,14 +12,14 @@
 }
 
 .label {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .textarea {
   width: 100%;
-  min-height: 88px;
+  min-height: 5.5rem;
   padding: var(--space-3) var(--space-4);
-  border: 2px solid var(--color-borde);
-  border-radius: var(--radius);
   background: var(--color-blanco);
+  border: 0.125rem solid var(--color-borde);
+  border-radius: 0.75rem;
 }

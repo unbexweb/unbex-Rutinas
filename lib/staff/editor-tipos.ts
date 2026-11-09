@@ -8,6 +8,8 @@ export type EjercicioDeBloque = {
   carga_sugerida: string | null;
   registra_carga: boolean;
   nota: string | null;
+  // Super serie: letra A, B, C… (los del mismo grupo dentro de un bloque se hacen seguidos)
+  grupo: string | null;
 };
 
 export type BloqueEditor = {
@@ -32,6 +34,6 @@ export type Resultado<T> = { ok: true; data: T } | { ok: false; error: string };
 export type CambiosEjercicio = Partial<
   Pick<
     EjercicioDeBloque,
-    "ejercicio_id" | "alternativa_id" | "series" | "reps" | "carga_sugerida" | "registra_carga" | "nota"
+    "ejercicio_id" | "alternativa_id" | "series" | "reps" | "carga_sugerida" | "registra_carga" | "nota" | "grupo"
   >
 >;

@@ -120,7 +120,7 @@ export async function moverBloque(bloqueId: string, dir: "arriba" | "abajo"): Pr
 
 // ---------------------------------------------------------------- ejercicios dentro de un bloque
 const COLUMNAS_EJ =
-  "id, orden, ejercicio_id, alternativa_id, series, reps, carga_sugerida, registra_carga, nota";
+  "id, orden, ejercicio_id, alternativa_id, series, reps, carga_sugerida, registra_carga, nota, grupo";
 
 export async function agregarEjercicio(
   bloqueId: string,
@@ -152,6 +152,11 @@ export async function actualizarEjercicio(beId: string, cambios: CambiosEjercici
   if (cambios.reps !== undefined) patch.reps = recortar(cambios.reps, LIMITES.reps);
   if (cambios.carga_sugerida !== undefined) patch.carga_sugerida = recortar(cambios.carga_sugerida, LIMITES.carga_sugerida);
   if (cambios.nota !== undefined) patch.nota = recortar(cambios.nota, LIMITES.nota);
+  if (cambios.grupo !== undefined) {
+    // Ninguno (null) o una letra mayúscula
+    if (cambios.grupo !== null && !/^[A-Z]$/.test(cambios.grupo)) return falla("El grupo tiene que ser una letra.");
+    patch.grupo = cambios.grupo;
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.from("bloque_ejercicios").update(patch).eq("id", beId).select("id");

@@ -62,7 +62,8 @@ Todo está **restringido al gym del usuario** (`gym_id`); un usuario de otro gym
 | `atender_solicitud(solicitud_id, plan_id)` | Ídem. Llama a `asignar_plan` y marca la solicitud `atendida` por el usuario actual |
 | `duplicar_plan(plan_id, nombre, tipo, nivel)` | Ídem. Clona un plan completo como plantilla nueva |
 | `copiar_semana(plan_id, origen, destino)` | Ídem. Reemplaza los bloques de la semana destino con una copia de la origen |
-| `completar_sesion(asignacion_id, sesion_id)` | `authenticated` (alumno activo): valida que la asignación sea suya y esté activa y que la sesión sea la que le toca; marca la sesión hecha y avanza (S4·E6 finaliza la asignación) |
+| `completar_sesion(asignacion_id, sesion_id)` | `authenticated` (alumno activo): el plan es libre, acepta cualquier sesión **no completada** de su asignación activa. `semana_actual`/`estimulo_actual` pasan a ser el primer pendiente (el sugerido); con las 24 completas la asignación se finaliza |
+| `pedir_proximo_ciclo(asignacion_id, tipo, nota)` | `authenticated` (alumno activo, dueño de la asignación): finaliza la asignación aunque queden pendientes y crea la solicitud (una sola pendiente por asignación) |
 | `personalizar_plan(alumno_id, plan_id)` | `authenticated`, pero adentro exige `is_staff()` y que plan y alumno sean del mismo gym |
 | `email_por_dni(dni)` | **solo `service_role`** (Server Action de login). No está expuesta a `anon` ni `authenticated` para que nadie pueda averiguar el email de un DNI |
 
@@ -95,3 +96,10 @@ Editar bloques y ejercicios con **`UPDATE` en el lugar**; no borrar y reinsertar
 ## Marcas de "hecho" (`registros_ejercicios`)
 
 El entrenamiento es una sola pantalla con todos los ejercicios en el orden que quiera el alumno, así que hace falta guardar cuáles marcó. Una fila por (registro de la sesión, ejercicio del plan) con `hecho`; desmarcar es `hecho = false` (el alumno no borra). Se borra en cascada con el registro y con el ejercicio del plan. Las sesiones hechas antes de esta tabla (sin ninguna marca) se muestran con ✓ en los ejercicios que tienen algo registrado.
+
+## Plan libre, super series y series tildadas
+
+- **Plan libre:** el alumno hace los entrenamientos en el orden que quiera. Lo que cuenta como progreso son los `registros_sesion.completada`; `asignaciones.semana_actual/estimulo_actual` solo guardan el primer pendiente.
+- **Super series:** `bloque_ejercicios.grupo` (una letra A–Z o nulo). Los ejercicios con el mismo grupo dentro de un bloque forman una super serie. `duplicar_plan`, `copiar_semana` y `personalizar_plan` copian el grupo.
+- **Series tildadas:** `registros_series.hecha`. Un ejercicio con carga queda hecho cuando todas sus series están tildadas; `registros_ejercicios.hecho` lo refleja (y es la marca de los ejercicios sin carga).
+- **Pruebas:** `pnpm test:db` corre las migraciones, el seed, las políticas y las funciones en PGlite.

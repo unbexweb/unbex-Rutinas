@@ -7,9 +7,6 @@ export type Asignacion = Tables<"asignaciones">;
 
 export const SESIONES_POR_PLAN = 24;
 
-// Posición (1 a 24) de una sesión dentro del plan.
-export const posicion = (semana: number, estimulo: number) => (semana - 1) * 6 + estimulo;
-
 // La asignación vigente del alumno: la activa o, si no hay, la última finalizada.
 // RLS ya limita todo al propio alumno.
 export const getAsignacion = cache(async (): Promise<Asignacion | null> => {
@@ -22,9 +19,15 @@ export const getAsignacion = cache(async (): Promise<Asignacion | null> => {
   return data.find((a) => a.estado === "activa") ?? data[0] ?? null;
 });
 
-// Cuántos entrenamientos hizo en la asignación.
-export function hechos(a: Asignacion): number {
-  return a.estado === "finalizada"
-    ? SESIONES_POR_PLAN
-    : posicion(a.semana_actual, a.estimulo_actual) - 1;
-}
+// El plan es libre: el progreso son los entrenamientos completos, no "por dónde va".
+// semana_actual/estimulo_actual solo guardan el primer pendiente (el sugerido).
+export const getProgreso = cache(async (asignacionId: string) => {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("registros_sesion")
+    .select("sesion_id")
+    .eq("asignacion_id", asignacionId)
+    .eq("completada", true);
+  const completadas = new Set((data ?? []).map((r) => r.sesion_id));
+  return { hechos: completadas.size, completadas };
+});
