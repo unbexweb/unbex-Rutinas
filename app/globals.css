@@ -9,11 +9,12 @@
   --sombra-tarjeta: 0 1px 2px rgb(42 21 48 / 0.06), 0 4px 14px rgb(42 21 48 / 0.08);
   --ancho-columna: 30rem; /* 480px */
 
-  /* Colores de las super series (cada grupo un color; nunca es la única señal: siempre hay letra) */
-  --color-grupo-a: #00695C;
-  --color-grupo-b: #B34700;
-  --color-grupo-c: #1F5AA6;
-  --color-grupo-d: #8E2C6D;
+  /* Super series: familia armónica derivada del violeta y el rosa de la marca. Se asignan en rotación
+     (A, B, C, D…) y todas tienen contraste AA (4,5:1) como texto sobre blanco. Nunca son la única señal. */
+  --color-ss-violeta: #7A3E93;
+  --color-ss-frambuesa: #A8245C;
+  --color-ss-ciruela: #6E2A4F;
+  --color-ss-terracota: #B04F3A;
 
   /* Neutros y estados */
   --color-blanco: #FFFFFF;

@@ -124,6 +124,86 @@ export async function guardarSerie(entrada: EntradaSerie): Promise<ResultadoAcci
   }
 }
 
+type FilaRonda = { beId: string; ejercicioUsadoId: string; totalSeries: number; peso: string; reps: string };
+
+// Super serie: UN tilde por ronda guarda la serie de esa ronda de todos los ejercicios del grupo.
+// Los que no registran carga guardan igual su fila (sin peso ni reps) para que quede la marca de la ronda.
+// Cada ejercicio queda hecho cuando todas sus series están tildadas.
+export async function guardarRonda(entrada: {
+  asignacionId: string;
+  sesionId: string;
+  ronda: number;
+  hecha: boolean;
+  filas: FilaRonda[];
+}): Promise<ResultadoAccion & { ejerciciosHechos?: Record<string, boolean> }> {
+  const { ronda, filas } = entrada;
+  if (!Number.isInteger(ronda) || ronda < 1 || ronda > 20 || filas.length < 1 || filas.length > 12) {
+    return { ok: false, error: ERROR_GENERICO };
+  }
+  const filasOk: { beId: string; ejercicioUsadoId: string; totalSeries: number; peso: number | null; reps: number | null }[] = [];
+  for (const f of filas) {
+    const peso = f.peso.trim();
+    const reps = f.reps.trim();
+    if ((peso && !PESO.test(peso)) || (reps && !REPS.test(reps)) || f.totalSeries < ronda || f.totalSeries > 20) {
+      return { ok: false, error: `Revisá los números de la ronda ${ronda}.` };
+    }
+    filasOk.push({
+      beId: f.beId,
+      ejercicioUsadoId: f.ejercicioUsadoId,
+      totalSeries: f.totalSeries,
+      peso: peso ? Number(peso.replace(",", ".")) : null,
+      reps: reps ? Number(reps) : null,
+    });
+  }
+
+  try {
+    const supabase = await createClient();
+    const ctx = await registroEditable(supabase, entrada);
+    if (!ctx.ok) return ctx;
+
+    const { error } = await supabase.from("registros_series").upsert(
+      filasOk.map((f) => ({
+        registro_id: ctx.registroId,
+        bloque_ejercicio_id: f.beId,
+        ejercicio_usado_id: f.ejercicioUsadoId,
+        n_serie: ronda,
+        peso: f.peso,
+        reps: f.reps,
+        hecha: entrada.hecha,
+      })),
+      { onConflict: "registro_id,bloque_ejercicio_id,n_serie" },
+    );
+    if (error) return { ok: false, error: ERROR_GENERICO };
+
+    const { data: tildadas } = await supabase
+      .from("registros_series")
+      .select("bloque_ejercicio_id, n_serie")
+      .eq("registro_id", ctx.registroId)
+      .eq("hecha", true)
+      .in("bloque_ejercicio_id", filasOk.map((f) => f.beId));
+
+    const ejerciciosHechos: Record<string, boolean> = {};
+    for (const f of filasOk) {
+      const propias = (tildadas ?? []).filter((t) => t.bloque_ejercicio_id === f.beId && t.n_serie <= f.totalSeries);
+      ejerciciosHechos[f.beId] = propias.length >= f.totalSeries;
+    }
+
+    const { error: errMarcas } = await supabase.from("registros_ejercicios").upsert(
+      Object.entries(ejerciciosHechos).map(([beId, hecho]) => ({
+        registro_id: ctx.registroId,
+        bloque_ejercicio_id: beId,
+        hecho,
+      })),
+      { onConflict: "registro_id,bloque_ejercicio_id" },
+    );
+    if (errMarcas) return { ok: false, error: ERROR_GENERICO };
+
+    return { ok: true, ejerciciosHechos };
+  } catch {
+    return { ok: false, error: ERROR_GENERICO };
+  }
+}
+
 // Ejercicios que no registran carga: un toque los marca o desmarca.
 export async function marcarEjercicio(entrada: Contexto & { hecho: boolean }): Promise<ResultadoAccion> {
   try {

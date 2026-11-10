@@ -6,3 +6,4 @@
 - [ ] Revisar el plan "Definición": se creó como copia exacta de Volumen. Hay que cargarle el contenido real.
 - [ ] Mail de Supabase: el servicio de mails que viene por defecto tiene un límite muy bajo (unos pocos mails por hora). Para recuperar contraseña con más de un puñado de alumnos hace falta configurar un SMTP propio en Supabase → Authentication → SMTP Settings.
 - [ ] Opcional, endurecer la CSP: hoy `script-src` lleva `'unsafe-inline'` porque Next.js inyecta scripts inline y las páginas estáticas no admiten nonce. Se puede pasar a nonces por request (middleware) si algún día hace falta.
+- [ ] Videos de ejercicios provisorios (de YouTube público): reemplazar por los del gimnasio. Se cargaron con `scripts/cargar-videos-demo.ts` (50 ejercicios del plan Volumen). Quedaron sin video: DB Press UNIL, Deficit SDL, Doble Press ALT y Triple Crush (nombres ambiguos).

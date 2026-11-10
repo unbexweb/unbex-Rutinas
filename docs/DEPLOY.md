@@ -9,6 +9,7 @@ Son los pendientes de [`docs/PENDIENTES.md`](PENDIENTES.md). Los marcados con �
 - [ ] 🔴 **Borrar los usuarios de prueba** (`alumno.prueba@unbex.test`, `admin.prueba@unbex.test`) desde Supabase → Authentication → Users. Al borrar el usuario se borran su perfil, sus asignaciones y sus registros.
 - [ ] 🔴 **Configurar un SMTP propio en Supabase** (Authentication → SMTP Settings). Sin eso, la recuperación de contraseña se queda sin mails enseguida.
 - [ ] **Cargar el contenido real del plan "Definición"** (hoy es una copia de Volumen).
+- [ ] **Reemplazar los videos provisorios** (de YouTube público, cargados con `scripts/cargar-videos-demo.ts`) por los del gimnasio, desde Ejercicios en el panel.
 - [ ] **Reemplazar los íconos provisorios** de la PWA por el logo real (ver lista de archivos en PENDIENTES).
 - [ ] *(Opcional)* Pasar la CSP a nonces.
 

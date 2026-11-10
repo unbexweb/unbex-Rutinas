@@ -122,11 +122,35 @@ export default async function EntrenarPage({ params }: { params: Promise<{ sesio
   const items: ItemVista[] = [];
   for (const b of bloques ?? []) {
     const ordenados = [...b.bloque_ejercicios].sort((x, y) => x.orden - y.orden);
+
+    // Super series (2 o más ejercicios con el mismo grupo en el bloque): las rondas son el mayor número de series del grupo.
+    const grupos = new Map<string, { cantidad: number; rondas: number }>();
+    for (const be of ordenados) {
+      if (!be.grupo) continue;
+      const g = grupos.get(be.grupo) ?? { cantidad: 0, rondas: 0 };
+      g.cantidad += 1;
+      if (be.registra_carga) {
+        const propias = (guardadas ?? []).filter((x) => x.bloque_ejercicio_id === be.id).map((x) => x.n_serie);
+        g.rondas = Math.max(g.rondas, cantidadSeries(be.series), ...propias);
+      }
+      grupos.set(be.grupo, g);
+    }
+
     for (const be of ordenados) {
       const filas = (guardadas ?? [])
         .filter((g) => g.bloque_ejercicio_id === be.id)
         .sort((x, y) => x.n_serie - y.n_serie);
-      const nSeries = Math.max(cantidadSeries(be.series), ...filas.map((f) => f.n_serie));
+      const grupo = be.grupo ? grupos.get(be.grupo) : undefined;
+      const enSuper = Boolean(grupo && grupo.cantidad >= 2);
+      const rondas = grupo?.rondas || 3;
+      const propias = parseInt(be.series ?? "", 10);
+      // Con carga: sus series. Sin carga dentro de una super serie: participa en cada ronda (solo se tilda).
+      // Sin carga y suelto: no tiene series.
+      const nSeries = be.registra_carga
+        ? Math.max(cantidadSeries(be.series), ...filas.map((f) => f.n_serie))
+        : enSuper
+          ? Math.min(20, Math.max(Number.isFinite(propias) && propias > 0 ? propias : rondas, ...filas.map((f) => f.n_serie)))
+          : 0;
       const series = Array.from({ length: nSeries }, (_, i) => {
         const fila = filas.find((f) => f.n_serie === i + 1);
         return {
@@ -137,7 +161,10 @@ export default async function EntrenarPage({ params }: { params: Promise<{ sesio
       });
       const marca = (marcados ?? []).find((m) => m.bloque_ejercicio_id === be.id);
       // Con carga: hecho cuando todas las series están tildadas (o quedó marcado con el diseño anterior).
-      const hecho = be.registra_carga ? series.every((s) => s.hecha) || Boolean(marca?.hecho) : Boolean(marca?.hecho);
+      const hecho =
+        be.registra_carga || enSuper
+          ? (series.length > 0 && series.every((s) => s.hecha)) || (be.registra_carga && Boolean(marca?.hecho))
+          : Boolean(marca?.hecho);
       const anterior: Record<string, SerieAnterior[]> = {};
       for (const e of [be.ejercicio, be.alternativa]) {
         const previa = e ? anteriorPorEjercicio.get(e.id) : undefined;
