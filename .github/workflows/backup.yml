@@ -1,0 +1,109 @@
+name: Backup diario
+
+# Todos los días a las 4:00 AM de Argentina (UTC-3, sin horario de verano = 07:00 UTC) y a mano desde la pestaña Actions.
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un backup a la vez: si uno manual se pisa con el programado, el segundo espera.
+concurrency:
+  group: backup-diario
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Dump, encriptado y artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # bash con pipefail: si falla cualquier comando de una tubería, falla el paso.
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Mismo número de versión que la CLI del proyecto (package.json).
+      SUPABASE_CLI_VERSION: 2.120.0
+    steps:
+      - name: Verificar que estén los secrets
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          faltan=0
+          if [ -z "$SUPABASE_DB_URL" ]; then echo "::error::Falta el secret SUPABASE_DB_URL (ver docs/BACKUPS.md)"; faltan=1; fi
+          if [ -z "$BACKUP_PASSPHRASE" ]; then echo "::error::Falta el secret BACKUP_PASSPHRASE (ver docs/BACKUPS.md)"; faltan=1; fi
+          exit $faltan
+
+      - name: Instalar la CLI de Supabase
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Calcular el nombre del backup
+        id: nombre
+        run: |
+          fecha=$(TZ=America/Argentina/Buenos_Aires date +%Y-%m-%d_%H-%M)
+          echo "base=unbex-backup-$fecha" >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/backup"
+
+      # Tres dumps con la CLI (usan Docker, que ya viene en el runner).
+      # El data.sql incluye el esquema auth (usuarios) y todo lo demás menos los esquemas internos de Supabase.
+      - name: Dump de roles
+        working-directory: ${{ runner.temp }}/backup
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" --role-only -f roles.sql
+
+      - name: Dump del esquema
+        working-directory: ${{ runner.temp }}/backup
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f schema.sql
+
+      - name: Dump de los datos (incluye auth)
+        working-directory: ${{ runner.temp }}/backup
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" --data-only --use-copy -f data.sql
+
+      # Un backup vacío o sin usuarios es peor que ninguno: si algo no cierra, el workflow falla (queda en rojo).
+      - name: Verificar que los dumps tengan contenido
+        working-directory: ${{ runner.temp }}/backup
+        run: |
+          for f in roles.sql schema.sql data.sql; do
+            if [ ! -s "$f" ]; then echo "::error::$f está vacío"; exit 1; fi
+          done
+          grep -Eq 'CREATE TABLE.*"profiles"' schema.sql || { echo "::error::schema.sql no tiene la tabla profiles"; exit 1; }
+          grep -Eq 'COPY "?auth"?\."?users"? ' data.sql || { echo "::error::data.sql no incluye auth.users"; exit 1; }
+          grep -Eq 'COPY "?public"?\."?profiles"? ' data.sql || { echo "::error::data.sql no incluye public.profiles"; exit 1; }
+          ls -l roles.sql schema.sql data.sql
+
+      - name: Comprimir y encriptar (gpg simétrico, AES-256)
+        working-directory: ${{ runner.temp }}/backup
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          BASE: ${{ steps.nombre.outputs.base }}
+        run: |
+          tar -czf "$BASE.tar.gz" roles.sql schema.sql data.sql
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 --s2k-mode 3 --s2k-digest-algo SHA512 --s2k-count 65011712 \
+            --output "$BASE.tar.gz.gpg" "$BASE.tar.gz"
+          # Comprobar que el archivo encriptado se puede desencriptar y tiene los tres dumps adentro.
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --pinentry-mode loopback --passphrase-fd 0 --decrypt "$BASE.tar.gz.gpg" \
+            | tar -tz | sort | tr '\n' ' ' | grep -qx 'data.sql roles.sql schema.sql ' \
+            || { echo "::error::El backup encriptado no se pudo verificar"; exit 1; }
+          # Solo sale el archivo encriptado: los .sql en claro se borran del runner.
+          rm -f roles.sql schema.sql data.sql "$BASE.tar.gz"
+          ls -l
+
+      - name: Subir el backup como artifact (30 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.nombre.outputs.base }}
+          path: ${{ runner.temp }}/backup/${{ steps.nombre.outputs.base }}.tar.gz.gpg
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 0
