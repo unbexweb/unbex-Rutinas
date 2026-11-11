@@ -13,11 +13,17 @@ type EntradaSerie = Contexto & {
   totalSeries: number;
   peso: string;
   reps: string;
-  hecha: boolean;
+  // Si no viene, se guardan solo el peso y las reps y la serie queda como estaba (tildada o no).
+  // El tilde solo marca la serie como hecha: los valores se guardan siempre, aunque no se tilde.
+  hecha?: boolean;
 };
 
 const PESO = /^\d{1,5}([.,]\d{1,2})?$/;
 const REPS = /^\d{1,4}$/;
+
+// "20 kg", "20kg" y "62,5" valen: se sacan espacios y la unidad antes de validar.
+const limpiarPeso = (v: string) => v.replace(/\s+/g, "").replace(/kgs?$/i, "");
+const limpiarReps = (v: string) => v.replace(/\s+/g, "");
 
 const ERROR_GENERICO = "No pudimos guardar. Revisá tu conexión y probá de nuevo.";
 
@@ -81,10 +87,10 @@ export async function guardarSerie(entrada: EntradaSerie): Promise<ResultadoAcci
   if (!Number.isInteger(nSerie) || nSerie < 1 || nSerie > 20 || totalSeries < 1 || totalSeries > 20) {
     return { ok: false, error: ERROR_GENERICO };
   }
-  const peso = entrada.peso.trim();
-  const reps = entrada.reps.trim();
+  const peso = limpiarPeso(entrada.peso);
+  const reps = limpiarReps(entrada.reps);
   if ((peso && !PESO.test(peso)) || (reps && !REPS.test(reps))) {
-    return { ok: false, error: `Revisá los números de la serie ${nSerie}.` };
+    return { ok: false, error: `Revisá los números de la serie ${nSerie}: el peso va como 62,5 y las reps como 8.` };
   }
 
   try {
@@ -92,14 +98,43 @@ export async function guardarSerie(entrada: EntradaSerie): Promise<ResultadoAcci
     const ctx = await registroEditable(supabase, entrada);
     if (!ctx.ok) return ctx;
 
+    const valores = {
+      peso: peso ? Number(peso.replace(",", ".")) : null,
+      reps: reps ? Number(reps) : null,
+    };
+
+    if (entrada.hecha === undefined) {
+      // Solo valores. Si los borró y no hay tilde, no hace falta crear una fila vacía.
+      if (valores.peso === null && valores.reps === null) {
+        const { error } = await supabase
+          .from("registros_series")
+          .update({ ...valores, ejercicio_usado_id: ejercicioUsadoId })
+          .eq("registro_id", ctx.registroId)
+          .eq("bloque_ejercicio_id", beId)
+          .eq("n_serie", nSerie);
+        return error ? { ok: false, error: ERROR_GENERICO } : { ok: true };
+      }
+      // Sin la columna "hecha" en el upsert, si la fila ya existe conserva su tilde.
+      const { error } = await supabase.from("registros_series").upsert(
+        {
+          registro_id: ctx.registroId,
+          bloque_ejercicio_id: beId,
+          ejercicio_usado_id: ejercicioUsadoId,
+          n_serie: nSerie,
+          ...valores,
+        },
+        { onConflict: "registro_id,bloque_ejercicio_id,n_serie" },
+      );
+      return error ? { ok: false, error: ERROR_GENERICO } : { ok: true };
+    }
+
     const { error } = await supabase.from("registros_series").upsert(
       {
         registro_id: ctx.registroId,
         bloque_ejercicio_id: beId,
         ejercicio_usado_id: ejercicioUsadoId,
         n_serie: nSerie,
-        peso: peso ? Number(peso.replace(",", ".")) : null,
-        reps: reps ? Number(reps) : null,
+        ...valores,
         hecha: entrada.hecha,
       },
       { onConflict: "registro_id,bloque_ejercicio_id,n_serie" },
@@ -142,10 +177,10 @@ export async function guardarRonda(entrada: {
   }
   const filasOk: { beId: string; ejercicioUsadoId: string; totalSeries: number; peso: number | null; reps: number | null }[] = [];
   for (const f of filas) {
-    const peso = f.peso.trim();
-    const reps = f.reps.trim();
+    const peso = limpiarPeso(f.peso);
+    const reps = limpiarReps(f.reps);
     if ((peso && !PESO.test(peso)) || (reps && !REPS.test(reps)) || f.totalSeries < ronda || f.totalSeries > 20) {
-      return { ok: false, error: `Revisá los números de la ronda ${ronda}.` };
+      return { ok: false, error: `Revisá los números de la ronda ${ronda}: el peso va como 62,5 y las reps como 8.` };
     }
     filasOk.push({
       beId: f.beId,

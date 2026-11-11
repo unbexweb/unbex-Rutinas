@@ -440,3 +440,40 @@
   border-top: 0.125rem solid var(--color-violeta);
   box-shadow: 0 -0.25rem 0.75rem rgb(42 21 48 / 0.08);
 }
+
+/* ---- estado de guardado por serie o ronda */
+.estadoFila td {
+  padding: 0 var(--space-1) var(--space-1);
+  text-align: right;
+}
+
+.estadoGuardado {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-texto-suave);
+}
+
+.errorGuardado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: stretch;
+}
+
+.reintentar {
+  min-height: 3rem;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-error-fondo);
+  border: 0.125rem solid var(--color-error);
+  border-radius: 0.75rem;
+  color: var(--color-error);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.detalleError {
+  font-size: 1rem;
+  color: var(--color-error);
+  font-weight: 600;
+}

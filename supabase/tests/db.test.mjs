@@ -301,6 +301,138 @@ await t("pedir_proximo_ciclo: tras completar las 24 también se puede pedir", as
   assert.equal(await cuenta(`select count(*) n from solicitudes_ciclo where asignacion_id=$1`, [asigLibre]), 1);
 });
 
+// ================================================================ guardado de pesos y reps (fix)
+// Imitan lo que hace la app con PostgREST: upsert por (registro_id, bloque_ejercicio_id, n_serie).
+// Solo valores: NO toca "hecha". Con tilde: también la actualiza.
+const alumnoG = await usuario("guarda@x", gym, "alumno", "activo");
+const asigG = (await db.query(`insert into asignaciones(alumno_id, plan_id) values ($1,$2) returning id`, [alumnoG, plan])).rows[0].id;
+const upsertValores = (r, be, uso, n, peso, reps) =>
+  db.query(
+    `insert into registros_series(registro_id, bloque_ejercicio_id, ejercicio_usado_id, n_serie, peso, reps)
+     values ($1,$2,$3,$4,$5,$6)
+     on conflict (registro_id, bloque_ejercicio_id, n_serie)
+     do update set peso = excluded.peso, reps = excluded.reps, ejercicio_usado_id = excluded.ejercicio_usado_id
+     returning id, peso, reps, hecha`,
+    [r, be, uso, n, peso, reps]);
+const upsertConTilde = (r, be, uso, n, peso, reps, hecha) =>
+  db.query(
+    `insert into registros_series(registro_id, bloque_ejercicio_id, ejercicio_usado_id, n_serie, peso, reps, hecha)
+     values ($1,$2,$3,$4,$5,$6,$7)
+     on conflict (registro_id, bloque_ejercicio_id, n_serie)
+     do update set peso = excluded.peso, reps = excluded.reps, ejercicio_usado_id = excluded.ejercicio_usado_id, hecha = excluded.hecha
+     returning hecha`,
+    [r, be, uso, n, peso, reps, hecha]);
+
+// Sesión SALTEADA: la sugerida es S1·E1 y el alumno entrena S2·E3.
+const sSalteada = await sesionDe(plan, 2, 3);
+const beSalt = await ejerciciosDe(sSalteada);
+const carga = beSalt.filter((x) => x.registra_carga);
+let regSalt;
+await t("sesión salteada: el alumno crea el registro de una sesión que no es la sugerida", async () => {
+  await como(alumnoG, async () => {
+    regSalt = (await db.query(`insert into registros_sesion(asignacion_id, sesion_id) values ($1,$2) returning id`, [asigG, sSalteada])).rows[0].id;
+  });
+  assert.equal((await estadoAsig(asigG)).e, 1); // el sugerido no se movió
+});
+await t("sesión salteada: guarda peso y reps SIN tildar y se conservan", async () => {
+  await como(alumnoG, async () => {
+    const r = (await upsertValores(regSalt, carga[0].id, carga[0].ejercicio_id, 1, 60, 8)).rows[0];
+    assert.equal(Number(r.peso), 60); assert.equal(r.reps, 8); assert.equal(r.hecha, false);
+  });
+  const g = (await db.query(`select peso, reps, hecha from registros_series where registro_id=$1 and n_serie=1`, [regSalt])).rows;
+  assert.equal(g.length, 1);
+});
+await t("guardar valores de nuevo (misma serie) actualiza y no choca con el unique", async () => {
+  await como(alumnoG, async () => {
+    const r = (await upsertValores(regSalt, carga[0].id, carga[0].ejercicio_id, 1, 62.5, 6)).rows[0];
+    assert.equal(Number(r.peso), 62.5); assert.equal(r.reps, 6);
+  });
+  assert.equal(await cuenta(`select count(*) n from registros_series where registro_id=$1 and bloque_ejercicio_id=$2`, [regSalt, carga[0].id]), 1);
+});
+await t("el tilde solo marca hecha; guardar valores después NO destilda", async () => {
+  await como(alumnoG, async () => {
+    assert.equal((await upsertConTilde(regSalt, carga[0].id, carga[0].ejercicio_id, 1, 62.5, 6, true)).rows[0].hecha, true);
+    const r = (await upsertValores(regSalt, carga[0].id, carga[0].ejercicio_id, 1, 65, 5)).rows[0];
+    assert.equal(r.hecha, true);                       // sigue tildada
+    assert.equal(Number(r.peso), 65);                  // y el valor nuevo se guardó
+    assert.equal((await upsertConTilde(regSalt, carga[0].id, carga[0].ejercicio_id, 1, 65, 5, false)).rows[0].hecha, false);
+  });
+});
+await t("varias series y varios ejercicios de la misma sesión salteada", async () => {
+  await como(alumnoG, async () => {
+    for (const n of [1, 2, 3]) await upsertValores(regSalt, carga[1].id, carga[1].ejercicio_id, n, 20 + n, 10);
+  });
+  assert.equal(await cuenta(`select count(*) n from registros_series where registro_id=$1 and bloque_ejercicio_id=$2`, [regSalt, carga[1].id]), 3);
+});
+
+// RONDA de super serie: un tilde guarda la serie de la ronda de TODOS los ejercicios del grupo, en un solo insert.
+const s14G = await sesionDe(plan, 1, 4);
+const be14 = (await db.query(`select be.id, be.ejercicio_id, be.alternativa_id, be.registra_carga, be.grupo, b.nombre bloque from bloque_ejercicios be join bloques b on b.id=be.bloque_id where b.sesion_id=$1 order by b.orden, be.orden`, [s14G])).rows;
+const grupoA = be14.filter((x) => x.bloque === "Bloque 2" && x.grupo === "A");
+let regRonda;
+await t("ronda de super serie: 2 ejercicios en un solo insert (tilde de la ronda)", async () => {
+  assert.ok(grupoA.length >= 2);
+  await como(alumnoG, async () => {
+    regRonda = (await db.query(`insert into registros_sesion(asignacion_id, sesion_id) values ($1,$2) returning id`, [asigG, s14G])).rows[0].id;
+    const r = await db.query(
+      `insert into registros_series(registro_id, bloque_ejercicio_id, ejercicio_usado_id, n_serie, peso, reps, hecha)
+       values ($1,$2,$3,1,40.5,8,true), ($1,$4,$5,1,12,10,true)
+       on conflict (registro_id, bloque_ejercicio_id, n_serie) do update set peso=excluded.peso, reps=excluded.reps, hecha=excluded.hecha
+       returning id`,
+      [regRonda, grupoA[0].id, grupoA[0].ejercicio_id, grupoA[1].id, grupoA[1].ejercicio_id]);
+    assert.equal(r.rows.length, 2);
+  });
+  assert.equal(await cuenta(`select count(*) n from registros_series where registro_id=$1 and hecha`, [regRonda]), 2);
+});
+await t("ronda: repetir el tilde (upsert de varias filas) no choca y se puede destildar", async () => {
+  await como(alumnoG, async () => {
+    const r = await db.query(
+      `insert into registros_series(registro_id, bloque_ejercicio_id, ejercicio_usado_id, n_serie, peso, reps, hecha)
+       values ($1,$2,$3,1,41,8,false), ($1,$4,$5,1,12,10,false)
+       on conflict (registro_id, bloque_ejercicio_id, n_serie) do update set peso=excluded.peso, reps=excluded.reps, hecha=excluded.hecha
+       returning hecha`,
+      [regRonda, grupoA[0].id, grupoA[0].ejercicio_id, grupoA[1].id, grupoA[1].ejercicio_id]);
+    assert.deepEqual(r.rows.map((x) => x.hecha), [false, false]);
+  });
+  assert.equal(await cuenta(`select count(*) n from registros_series where registro_id=$1`, [regRonda]), 2);
+});
+await t("ronda con un ejercicio sin carga: fila sin peso ni reps, solo tildada", async () => {
+  await como(alumnoG, async () => {
+    const r = await db.query(
+      `insert into registros_series(registro_id, bloque_ejercicio_id, ejercicio_usado_id, n_serie, peso, reps, hecha)
+       values ($1,$2,$3,2,null,null,true) returning peso, reps, hecha`,
+      [regRonda, grupoA[1].id, grupoA[1].ejercicio_id]);
+    assert.deepEqual([r.rows[0].peso, r.rows[0].reps, r.rows[0].hecha], [null, null, true]);
+  });
+});
+await t("la alternativa se puede guardar como ejercicio usado; uno ajeno, no", async () => {
+  const conAlt = be14.find((x) => x.alternativa_id) ?? (await ejerciciosDe(await sesionDe(plan, 1, 4))).find((x) => x.alternativa_id);
+  const otroEj = (await db.query(`select id from ejercicios where gym_id=$1 and id not in ($2,$3) limit 1`, [gym, conAlt.ejercicio_id, conAlt.alternativa_id])).rows[0].id;
+  await como(alumnoG, async () => {
+    await upsertValores(regRonda, conAlt.id, conAlt.alternativa_id, 1, 30, 10);
+    await falla(upsertValores(regRonda, conAlt.id, otroEj, 2, 30, 10), /row-level security/);
+  });
+});
+await t("no se pueden guardar series de un ejercicio de otra sesión", async () => {
+  const ajeno = (await ejerciciosDe(await sesionDe(plan, 3, 6)))[0];
+  await como(alumnoG, () => falla(upsertValores(regRonda, ajeno.id, ajeno.ejercicio_id, 1, 10, 10), /row-level security/));
+});
+await t("otro alumno no puede escribir ni pisar las series del registro", async () => {
+  await como(alumno2, async () => {
+    await falla(upsertValores(regRonda, grupoA[0].id, grupoA[0].ejercicio_id, 3, 99, 9), /row-level security/);
+    const r = await db.query(`update registros_series set peso=999 where registro_id=$1 returning id`, [regRonda]);
+    assert.equal(r.rows.length, 0);
+  });
+  assert.equal(await cuenta(`select count(*) n from registros_series where registro_id=$1 and peso=999`, [regRonda]), 0);
+});
+await t("peso y reps son valores opcionales: se pueden dejar en null y volver a cargar", async () => {
+  await como(alumnoG, async () => {
+    const r = (await upsertValores(regSalt, carga[0].id, carga[0].ejercicio_id, 1, null, null)).rows[0];
+    assert.deepEqual([r.peso, r.reps], [null, null]);
+    assert.equal(Number((await upsertValores(regSalt, carga[0].id, carga[0].ejercicio_id, 1, 70, 4)).rows[0].peso), 70);
+  });
+});
+
 // ================================================================ funciones de staff
 const alumnoAsignar = await usuario("asignar@x", gym, "alumno", "activo");
 await t("asignar_plan: crea S1·E1 activa y cambiar de plan finaliza la anterior", async () => {
